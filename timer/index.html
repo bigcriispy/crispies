@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HIIT Timer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app">
+    <header class="header">
+      <h1>HIIT Timer</h1>
+      <p class="tagline">High-Intensity Interval Training</p>
+    </header>
+
+    <main class="main">
+      <section class="mode-toggle" aria-label="Timer mode">
+        <button type="button" class="mode-tab mode-tab-active" id="mode-simple">
+          Simple
+        </button>
+        <button type="button" class="mode-tab" id="mode-advanced">
+          Advanced
+        </button>
+      </section>
+
+      <section class="config" aria-label="Timer settings">
+        <div class="config-mode config-mode-simple" id="config-simple">
+          <div class="config-row">
+            <label for="work">Work <span class="unit">(sec)</span></label>
+            <input type="number" id="work" min="5" max="300" value="30" step="5">
+          </div>
+          <div class="config-row">
+            <label for="rest">Rest <span class="unit">(sec)</span></label>
+            <input type="number" id="rest" min="5" max="120" value="15" step="5">
+          </div>
+          <div class="config-row">
+            <label for="rounds">Rounds</label>
+            <input type="number" id="rounds" min="1" max="50" value="8">
+          </div>
+        </div>
+
+        <div class="config-mode config-mode-advanced" id="config-advanced">
+          <div class="config-row full-width">
+            <label for="adv-sets">Sets</label>
+            <input type="number" id="adv-sets" min="1" max="50" value="4">
+          </div>
+          <div class="sets-grid" id="adv-sets-container" aria-label="Per-set configuration">
+            <!-- Set rows inserted via JavaScript -->
+          </div>
+        </div>
+      </section>
+
+      <section class="display" aria-live="polite">
+        <div class="phase-badge" id="phase-badge" aria-hidden="true">READY</div>
+        <div class="time" id="time">0:30</div>
+        <div class="rounds-display">
+          Round <span id="current-round">0</span> / <span id="total-rounds">8</span>
+        </div>
+      </section>
+
+      <section class="controls">
+        <button type="button" class="btn btn-primary" id="btn-start" aria-label="Start timer">
+          Start
+        </button>
+        <button type="button" class="btn btn-secondary" id="btn-pause" disabled aria-label="Pause timer">
+          Pause
+        </button>
+        <button type="button" class="btn btn-secondary" id="btn-reset" aria-label="Reset timer">
+          Reset
+        </button>
+      </section>
+
+      <section class="sound-toggle" aria-label="Sound settings">
+        <label class="toggle">
+          <input type="checkbox" id="sound-enabled" checked>
+          <span class="toggle-track">
+            <span class="toggle-thumb"></span>
+          </span>
+          <span class="toggle-label">Boxing bell sound</span>
+        </label>
+      </section>
+
+      <p class="hint" id="hint">Set work, rest, and rounds above, then press Start.</p>
+    </main>
+  </div>
+  <script src="app.js"></script>
+</body>
+</html>

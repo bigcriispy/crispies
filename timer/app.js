@@ -42,7 +42,66 @@
 
   let audioCtx = null;
   let dingAudio = null;
+  let silentChannel = null;
   let scheduledTimeouts = [];
+
+  function makeSilentWavDataUrl() {
+    var sampleRate = 44100;
+    var duration = 0.5;
+    var numSamples = Math.round(sampleRate * duration);
+    var numChannels = 1;
+    var bitsPerSample = 16;
+    var byteRate = sampleRate * numChannels * (bitsPerSample / 8);
+    var dataSize = numSamples * numChannels * (bitsPerSample / 8);
+    var buffer = new ArrayBuffer(44 + dataSize);
+    var view = new DataView(buffer);
+    var pos = 0;
+    function writeStr(s) { for (var i = 0; i < s.length; i++) view.setUint8(pos++, s.charCodeAt(i)); }
+    function write16(v) { view.setUint16(pos, v, true); pos += 2; }
+    function write32(v) { view.setUint32(pos, v, true); pos += 4; }
+    writeStr('RIFF');
+    write32(36 + dataSize);
+    writeStr('WAVE');
+    writeStr('fmt ');
+    write32(16);
+    write16(1);
+    write16(numChannels);
+    write32(sampleRate);
+    write32(byteRate);
+    write16(numChannels * (bitsPerSample / 8));
+    write16(bitsPerSample);
+    writeStr('data');
+    write32(dataSize);
+    for (var i = 0; i < numSamples; i++) {
+      view.setInt16(pos, 0, true);
+      pos += 2;
+    }
+    var b64 = btoa(String.fromCharCode.apply(null, new Uint8Array(buffer)));
+    return 'data:audio/wav;base64,' + b64;
+  }
+
+  function startSilentChannel() {
+    try {
+      if (silentChannel) return;
+      silentChannel = new Audio(makeSilentWavDataUrl());
+      silentChannel.setAttribute('x-webkit-airplay', 'deny');
+      silentChannel.preload = 'auto';
+      silentChannel.loop = true;
+      silentChannel.volume = 0;
+      silentChannel.play();
+    } catch (e) {}
+  }
+
+  function stopSilentChannel() {
+    try {
+      if (silentChannel) {
+        silentChannel.pause();
+        silentChannel.removeAttribute('src');
+        silentChannel.load();
+        silentChannel = null;
+      }
+    } catch (e) {}
+  }
 
   function makeDingWavDataUrl() {
     var sampleRate = 44100;
@@ -356,6 +415,7 @@
 
     if (state.phase === PHASE.DONE) {
       stopInterval();
+      stopSilentChannel();
       els.btnStart.textContent = 'Start';
       els.btnStart.disabled = false;
       els.btnPause.disabled = true;
@@ -398,8 +458,9 @@
       lockConfig(true);
       els.btnStart.textContent = 'Resume';
       els.hint.textContent = 'Work hard during WORK, recover during REST.';
-      // iOS: use HTML5 Audio + WAV data URI (unlocked on this tap); schedule all dings via setTimeout
+      // iOS: silent looping channel can allow dings to play with silent switch on; then unlock + schedule dings
       if (state.soundOn) {
+        startSilentChannel();
         if (!dingAudio) {
           dingAudio = new Audio(makeDingWavDataUrl());
           dingAudio.volume = 1;
@@ -432,6 +493,7 @@
     stopInterval();
     scheduledTimeouts.forEach(function (id) { clearTimeout(id); });
     scheduledTimeouts = [];
+    stopSilentChannel();
     state.phase = PHASE.READY;
     state.currentRound = 0;
     if (state.mode === 'advanced') {

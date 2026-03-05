@@ -10,6 +10,8 @@
     workSeconds: 30,
     restSeconds: 15,
     remainingSeconds: 30,
+    phaseStartTime: 0,
+    phaseDuration: 30,
     intervalId: null,
     configLocked: false,
     soundOn: true,
@@ -335,15 +337,18 @@
     });
   }
 
+  var TICK_MS = 100;
+
   function tick() {
     if (state.phase === PHASE.DONE) {
       stopInterval();
       return;
     }
 
-    state.remainingSeconds -= 1;
+    var elapsed = (Date.now() - state.phaseStartTime) / 1000;
+    state.remainingSeconds = Math.max(0, Math.ceil(state.phaseDuration - elapsed));
 
-    if (state.remainingSeconds <= 0) {
+    if (elapsed >= state.phaseDuration) {
       if (state.phase === PHASE.WORK) {
         if (state.currentRound >= state.totalRounds) {
           state.phase = PHASE.DONE;
@@ -351,7 +356,9 @@
           workoutCompleteBell();
         } else {
           state.phase = PHASE.REST;
-          state.remainingSeconds = getCurrentRestSeconds();
+          state.phaseDuration = getCurrentRestSeconds();
+          state.phaseStartTime = Date.now();
+          state.remainingSeconds = state.phaseDuration;
           boxingBellTriple();
         }
       } else if (state.phase === PHASE.REST) {
@@ -362,7 +369,9 @@
           workoutCompleteBell();
         } else {
           state.phase = PHASE.WORK;
-          state.remainingSeconds = getCurrentWorkSeconds();
+          state.phaseDuration = getCurrentWorkSeconds();
+          state.phaseStartTime = Date.now();
+          state.remainingSeconds = state.phaseDuration;
           boxingBellSingle();
         }
       }
@@ -384,7 +393,7 @@
 
   function startInterval() {
     if (state.intervalId) return;
-    state.intervalId = setInterval(tick, 1000);
+    state.intervalId = setInterval(tick, TICK_MS);
   }
 
   function stopInterval() {
@@ -402,7 +411,8 @@
         state.totalRounds = cfgAdv.totalRounds;
         state.currentRound = 1;
         state.phase = PHASE.WORK;
-        state.remainingSeconds = getCurrentWorkSeconds();
+        state.phaseDuration = getCurrentWorkSeconds();
+        state.remainingSeconds = state.phaseDuration;
       } else {
         const cfg = readSimpleConfig();
         state.workSeconds = cfg.workSeconds;
@@ -410,13 +420,14 @@
         state.totalRounds = cfg.totalRounds;
         state.currentRound = 1;
         state.phase = PHASE.WORK;
+        state.phaseDuration = state.workSeconds;
         state.remainingSeconds = state.workSeconds;
       }
       state.currentRound = 1;
+      state.phaseStartTime = Date.now();
       lockConfig(true);
       els.btnStart.textContent = 'Resume';
       els.hint.textContent = 'Work hard during WORK, recover during REST.';
-      // Unlock audio: silent channel (iOS silent switch), then first ding in same gesture
       if (state.soundOn) {
         startSilentChannel();
         if (!dingAudio) {
@@ -425,6 +436,9 @@
         }
         playDingAudio();
       }
+    } else {
+      state.phaseDuration = state.remainingSeconds;
+      state.phaseStartTime = Date.now();
     }
     els.btnStart.disabled = true;
     els.btnPause.disabled = false;

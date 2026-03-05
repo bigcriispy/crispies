@@ -264,6 +264,11 @@
   }
 
   function start() {
+    // Unlock audio on mobile (iOS/Android require user gesture before playing)
+    if (state.soundOn) {
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+    }
     if (state.phase === PHASE.DONE || state.phase === PHASE.READY) {
       if (state.mode === 'advanced') {
         const cfgAdv = readAdvancedConfig();

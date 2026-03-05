@@ -41,11 +41,62 @@
   };
 
   let audioCtx = null;
+  let dingAudio = null;
+  let scheduledTimeouts = [];
+
+  function makeDingWavDataUrl() {
+    var sampleRate = 44100;
+    var freq = 900;
+    var duration = 0.18;
+    var numSamples = Math.round(sampleRate * duration);
+    var numChannels = 1;
+    var bitsPerSample = 16;
+    var byteRate = sampleRate * numChannels * (bitsPerSample / 8);
+    var dataSize = numSamples * numChannels * (bitsPerSample / 8);
+    var buffer = new ArrayBuffer(44 + dataSize);
+    var view = new DataView(buffer);
+    var pos = 0;
+    function writeStr(s) { for (var i = 0; i < s.length; i++) view.setUint8(pos++, s.charCodeAt(i)); }
+    function write16(v) { view.setUint16(pos, v, true); pos += 2; }
+    function write32(v) { view.setUint32(pos, v, true); pos += 4; }
+    writeStr('RIFF');
+    write32(36 + dataSize);
+    writeStr('WAVE');
+    writeStr('fmt ');
+    write32(16);
+    write16(1);
+    write16(numChannels);
+    write32(sampleRate);
+    write32(byteRate);
+    write16(numChannels * (bitsPerSample / 8));
+    write16(bitsPerSample);
+    writeStr('data');
+    write32(dataSize);
+    for (var i = 0; i < numSamples; i++) {
+      var t = i / sampleRate;
+      var sample = Math.sin(2 * Math.PI * freq * t) * 0.3;
+      if (i < numSamples * 0.1) sample *= i / (numSamples * 0.1);
+      if (i > numSamples * 0.8) sample *= (numSamples - i) / (numSamples * 0.2);
+      view.setInt16(pos, sample < 0 ? sample * 0x8000 : sample * 0x7FFF, true);
+      pos += 2;
+    }
+    var b64 = btoa(String.fromCharCode.apply(null, new Uint8Array(buffer)));
+    return 'data:audio/wav;base64,' + b64;
+  }
+
+  function playDingAudio() {
+    if (!dingAudio || !state.soundOn) return;
+    try {
+      dingAudio.currentTime = 0;
+      dingAudio.play();
+    } catch (e) {}
+  }
 
   function beep(frequency, duration) {
     frequency = frequency || 800;
     duration = duration || 0.12;
     if (!state.soundOn) return;
+    if (dingAudio) { playDingAudio(); return; }
     try {
       if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
       function play() {
@@ -72,73 +123,68 @@
   }
 
   function boxingBellSingle() {
-    beep(900, 0.18);
+    if (dingAudio) playDingAudio();
+    else beep(900, 0.18);
   }
 
   function boxingBellTriple() {
-    boxingBellSingle();
-    setTimeout(function () { boxingBellSingle(); }, 250);
-    setTimeout(function () { boxingBellSingle(); }, 500);
+    if (dingAudio) {
+      playDingAudio();
+      setTimeout(function () { playDingAudio(); }, 250);
+      setTimeout(function () { playDingAudio(); }, 500);
+    } else {
+      boxingBellSingle();
+      setTimeout(function () { boxingBellSingle(); }, 250);
+      setTimeout(function () { boxingBellSingle(); }, 500);
+    }
   }
 
   function workoutCompleteBell() {
     if (!state.soundOn) return;
-    beep(650, 0.2);
-    setTimeout(function () { beep(900, 0.22); }, 250);
-  }
-
-  function scheduleBeepAt(offsetSec, frequency, duration) {
-    if (!audioCtx || !state.soundOn) return;
-    try {
-      var t = audioCtx.currentTime + offsetSec;
-      var osc = audioCtx.createOscillator();
-      var gain = audioCtx.createGain();
-      osc.connect(gain);
-      gain.connect(audioCtx.destination);
-      osc.frequency.value = frequency;
-      osc.type = 'sine';
-      gain.gain.setValueAtTime(0.15, t);
-      gain.gain.exponentialRampToValueAtTime(0.01, t + duration);
-      osc.start(t);
-      osc.stop(t + duration);
-    } catch (e) {}
-  }
-
-  function scheduleTripleAt(offsetSec) {
-    scheduleBeepAt(offsetSec, 900, 0.18);
-    scheduleBeepAt(offsetSec + 0.25, 900, 0.18);
-    scheduleBeepAt(offsetSec + 0.5, 900, 0.18);
-  }
-
-  function scheduleCompleteAt(offsetSec) {
-    scheduleBeepAt(offsetSec, 650, 0.2);
-    scheduleBeepAt(offsetSec + 0.25, 900, 0.22);
+    if (dingAudio) {
+      playDingAudio();
+      setTimeout(function () { playDingAudio(); }, 250);
+    } else {
+      beep(650, 0.2);
+      setTimeout(function () { beep(900, 0.22); }, 250);
+    }
   }
 
   function scheduleWorkoutBeeps() {
-    if (!audioCtx || !state.soundOn) return;
+    if (!dingAudio || !state.soundOn) return;
+    scheduledTimeouts.forEach(function (id) { clearTimeout(id); });
+    scheduledTimeouts = [];
     var offset = 0;
     var n = state.totalRounds;
+    function dingAt(ms) {
+      scheduledTimeouts.push(setTimeout(playDingAudio, ms));
+    }
     if (state.mode === 'simple') {
       var work = state.workSeconds;
       var rest = state.restSeconds;
       var cycle = work + 0.75 + rest;
       for (var i = 0; i < n - 1; i++) {
-        scheduleTripleAt(offset + work);
+        var t = (offset + work) * 1000;
+        dingAt(t); dingAt(t + 250); dingAt(t + 500);
         offset += cycle;
-        scheduleBeepAt(offset, 900, 0.18);
+        dingAt(offset * 1000);
       }
-      scheduleCompleteAt(offset + work);
+      var endT = (offset + work) * 1000;
+      dingAt(endT);
+      dingAt(endT + 250);
     } else {
       for (var j = 0; j < n; j++) {
         var w = state.perSets[j].work;
         var r = state.perSets[j].rest;
         if (j < n - 1) {
-          scheduleTripleAt(offset + w);
+          var t = (offset + w) * 1000;
+          dingAt(t); dingAt(t + 250); dingAt(t + 500);
           offset += w + 0.75 + r;
-          scheduleBeepAt(offset, 900, 0.18);
+          dingAt(offset * 1000);
         } else {
-          scheduleCompleteAt(offset + w);
+          var endT = (offset + w) * 1000;
+          dingAt(endT);
+          dingAt(endT + 250);
         }
       }
     }
@@ -352,11 +398,13 @@
       lockConfig(true);
       els.btnStart.textContent = 'Resume';
       els.hint.textContent = 'Work hard during WORK, recover during REST.';
-      // Unlock audio on mobile: create/resume and schedule all beeps in same user gesture (iOS requirement)
+      // iOS: use HTML5 Audio + WAV data URI (unlocked on this tap); schedule all dings via setTimeout
       if (state.soundOn) {
-        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        if (audioCtx.resume) audioCtx.resume();
-        boxingBellSingle();
+        if (!dingAudio) {
+          dingAudio = new Audio(makeDingWavDataUrl());
+          dingAudio.volume = 1;
+        }
+        playDingAudio();
         scheduleWorkoutBeeps();
         state.useScheduledBeeps = true;
       }
@@ -372,6 +420,8 @@
   function pause() {
     stopInterval();
     state.useScheduledBeeps = false;
+    scheduledTimeouts.forEach(function (id) { clearTimeout(id); });
+    scheduledTimeouts = [];
     els.btnStart.disabled = false;
     els.btnPause.disabled = true;
     els.btnStart.textContent = 'Resume';
@@ -380,6 +430,8 @@
 
   function reset() {
     stopInterval();
+    scheduledTimeouts.forEach(function (id) { clearTimeout(id); });
+    scheduledTimeouts = [];
     state.phase = PHASE.READY;
     state.currentRound = 0;
     if (state.mode === 'advanced') {

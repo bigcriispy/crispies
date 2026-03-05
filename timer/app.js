@@ -14,7 +14,8 @@
     configLocked: false,
     soundOn: true,
     mode: 'simple',
-    perSets: []
+    perSets: [],
+    useScheduledBeeps: false
   };
 
   const els = {
@@ -41,40 +42,106 @@
 
   let audioCtx = null;
 
-  function beep(frequency = 800, duration = 0.12) {
+  function beep(frequency, duration) {
+    frequency = frequency || 800;
+    duration = duration || 0.12;
     if (!state.soundOn) return;
     try {
       if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      const osc = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
-      osc.connect(gain);
-      gain.connect(audioCtx.destination);
-      osc.frequency.value = frequency;
-      osc.type = 'sine';
-      gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
-      osc.start(audioCtx.currentTime);
-      osc.stop(audioCtx.currentTime + duration);
+      function play() {
+        try {
+          var osc = audioCtx.createOscillator();
+          var gain = audioCtx.createGain();
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.frequency.value = frequency;
+          osc.type = 'sine';
+          var t = audioCtx.currentTime;
+          gain.gain.setValueAtTime(0.15, t);
+          gain.gain.exponentialRampToValueAtTime(0.01, t + duration);
+          osc.start(t);
+          osc.stop(t + duration);
+        } catch (e) {}
+      }
+      if (audioCtx.state === 'suspended' && audioCtx.resume) {
+        audioCtx.resume().then(play);
+      } else {
+        play();
+      }
     } catch (_) {}
   }
 
   function boxingBellSingle() {
-    // One clear ding at work start
     beep(900, 0.18);
   }
 
   function boxingBellTriple() {
-    // Three fast dings when work ends and rest begins
     boxingBellSingle();
     setTimeout(function () { boxingBellSingle(); }, 250);
     setTimeout(function () { boxingBellSingle(); }, 500);
   }
 
   function workoutCompleteBell() {
-    // Slightly lower double ding for workout complete
     if (!state.soundOn) return;
     beep(650, 0.2);
     setTimeout(function () { beep(900, 0.22); }, 250);
+  }
+
+  function scheduleBeepAt(offsetSec, frequency, duration) {
+    if (!audioCtx || !state.soundOn) return;
+    try {
+      var t = audioCtx.currentTime + offsetSec;
+      var osc = audioCtx.createOscillator();
+      var gain = audioCtx.createGain();
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.frequency.value = frequency;
+      osc.type = 'sine';
+      gain.gain.setValueAtTime(0.15, t);
+      gain.gain.exponentialRampToValueAtTime(0.01, t + duration);
+      osc.start(t);
+      osc.stop(t + duration);
+    } catch (e) {}
+  }
+
+  function scheduleTripleAt(offsetSec) {
+    scheduleBeepAt(offsetSec, 900, 0.18);
+    scheduleBeepAt(offsetSec + 0.25, 900, 0.18);
+    scheduleBeepAt(offsetSec + 0.5, 900, 0.18);
+  }
+
+  function scheduleCompleteAt(offsetSec) {
+    scheduleBeepAt(offsetSec, 650, 0.2);
+    scheduleBeepAt(offsetSec + 0.25, 900, 0.22);
+  }
+
+  function scheduleWorkoutBeeps() {
+    if (!audioCtx || !state.soundOn) return;
+    var offset = 0;
+    var n = state.totalRounds;
+    if (state.mode === 'simple') {
+      var work = state.workSeconds;
+      var rest = state.restSeconds;
+      var cycle = work + 0.75 + rest;
+      for (var i = 0; i < n - 1; i++) {
+        scheduleTripleAt(offset + work);
+        offset += cycle;
+        scheduleBeepAt(offset, 900, 0.18);
+      }
+      scheduleCompleteAt(offset + work);
+    } else {
+      for (var j = 0; j < n; j++) {
+        var w = state.perSets[j].work;
+        var r = state.perSets[j].rest;
+        if (j < n - 1) {
+          scheduleTripleAt(offset + w);
+          offset += w + 0.75 + r;
+          scheduleBeepAt(offset, 900, 0.18);
+        } else {
+          scheduleCompleteAt(offset + w);
+        }
+      }
+    }
   }
 
   function formatTime(seconds) {
@@ -218,22 +285,22 @@
         if (state.currentRound >= state.totalRounds) {
           state.phase = PHASE.DONE;
           state.remainingSeconds = 0;
-          workoutCompleteBell();
+          if (!state.useScheduledBeeps) workoutCompleteBell();
         } else {
           state.phase = PHASE.REST;
           state.remainingSeconds = getCurrentRestSeconds();
-          boxingBellTriple();
+          if (!state.useScheduledBeeps) boxingBellTriple();
         }
       } else if (state.phase === PHASE.REST) {
         state.currentRound += 1;
         if (state.currentRound > state.totalRounds) {
           state.phase = PHASE.DONE;
           state.remainingSeconds = 0;
-          workoutCompleteBell();
+          if (!state.useScheduledBeeps) workoutCompleteBell();
         } else {
           state.phase = PHASE.WORK;
           state.remainingSeconds = getCurrentWorkSeconds();
-          boxingBellSingle();
+          if (!state.useScheduledBeeps) boxingBellSingle();
         }
       }
       applyPhaseUI(state.phase);
@@ -264,11 +331,6 @@
   }
 
   function start() {
-    // Unlock audio on mobile (iOS/Android require user gesture before playing)
-    if (state.soundOn) {
-      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      if (audioCtx.state === 'suspended') audioCtx.resume();
-    }
     if (state.phase === PHASE.DONE || state.phase === PHASE.READY) {
       if (state.mode === 'advanced') {
         const cfgAdv = readAdvancedConfig();
@@ -290,7 +352,16 @@
       lockConfig(true);
       els.btnStart.textContent = 'Resume';
       els.hint.textContent = 'Work hard during WORK, recover during REST.';
-      boxingBellSingle();
+      // Unlock audio on mobile: create/resume and schedule all beeps in same user gesture (iOS requirement)
+      if (state.soundOn) {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioCtx.resume) audioCtx.resume();
+        boxingBellSingle();
+        scheduleWorkoutBeeps();
+        state.useScheduledBeeps = true;
+      }
+    } else {
+      state.useScheduledBeeps = false;
     }
     els.btnStart.disabled = true;
     els.btnPause.disabled = false;
@@ -300,6 +371,7 @@
 
   function pause() {
     stopInterval();
+    state.useScheduledBeeps = false;
     els.btnStart.disabled = false;
     els.btnPause.disabled = true;
     els.btnStart.textContent = 'Resume';

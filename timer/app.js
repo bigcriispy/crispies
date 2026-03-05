@@ -14,8 +14,7 @@
     configLocked: false,
     soundOn: true,
     mode: 'simple',
-    perSets: [],
-    useScheduledBeeps: false
+    perSets: []
   };
 
   const els = {
@@ -43,7 +42,6 @@
   let audioCtx = null;
   let dingAudio = null;
   let silentChannel = null;
-  let scheduledTimeouts = [];
 
   function makeSilentWavDataUrl() {
     var sampleRate = 44100;
@@ -209,46 +207,6 @@
     }
   }
 
-  function scheduleWorkoutBeeps() {
-    if (!dingAudio || !state.soundOn) return;
-    scheduledTimeouts.forEach(function (id) { clearTimeout(id); });
-    scheduledTimeouts = [];
-    var offset = 0;
-    var n = state.totalRounds;
-    function dingAt(ms) {
-      scheduledTimeouts.push(setTimeout(playDingAudio, ms));
-    }
-    if (state.mode === 'simple') {
-      var work = state.workSeconds;
-      var rest = state.restSeconds;
-      var cycle = work + 0.75 + rest;
-      for (var i = 0; i < n - 1; i++) {
-        var t = (offset + work) * 1000;
-        dingAt(t); dingAt(t + 250); dingAt(t + 500);
-        offset += cycle;
-        dingAt(offset * 1000);
-      }
-      var endT = (offset + work) * 1000;
-      dingAt(endT);
-      dingAt(endT + 250);
-    } else {
-      for (var j = 0; j < n; j++) {
-        var w = state.perSets[j].work;
-        var r = state.perSets[j].rest;
-        if (j < n - 1) {
-          var t = (offset + w) * 1000;
-          dingAt(t); dingAt(t + 250); dingAt(t + 500);
-          offset += w + 0.75 + r;
-          dingAt(offset * 1000);
-        } else {
-          var endT = (offset + w) * 1000;
-          dingAt(endT);
-          dingAt(endT + 250);
-        }
-      }
-    }
-  }
-
   function formatTime(seconds) {
     const m = Math.floor(seconds / 60);
     const s = seconds % 60;
@@ -390,22 +348,22 @@
         if (state.currentRound >= state.totalRounds) {
           state.phase = PHASE.DONE;
           state.remainingSeconds = 0;
-          if (!state.useScheduledBeeps) workoutCompleteBell();
+          workoutCompleteBell();
         } else {
           state.phase = PHASE.REST;
           state.remainingSeconds = getCurrentRestSeconds();
-          if (!state.useScheduledBeeps) boxingBellTriple();
+          boxingBellTriple();
         }
       } else if (state.phase === PHASE.REST) {
         state.currentRound += 1;
         if (state.currentRound > state.totalRounds) {
           state.phase = PHASE.DONE;
           state.remainingSeconds = 0;
-          if (!state.useScheduledBeeps) workoutCompleteBell();
+          workoutCompleteBell();
         } else {
           state.phase = PHASE.WORK;
           state.remainingSeconds = getCurrentWorkSeconds();
-          if (!state.useScheduledBeeps) boxingBellSingle();
+          boxingBellSingle();
         }
       }
       applyPhaseUI(state.phase);
@@ -458,7 +416,7 @@
       lockConfig(true);
       els.btnStart.textContent = 'Resume';
       els.hint.textContent = 'Work hard during WORK, recover during REST.';
-      // iOS: silent looping channel can allow dings to play with silent switch on; then unlock + schedule dings
+      // Unlock audio: silent channel (iOS silent switch), then first ding in same gesture
       if (state.soundOn) {
         startSilentChannel();
         if (!dingAudio) {
@@ -466,11 +424,7 @@
           dingAudio.volume = 1;
         }
         playDingAudio();
-        scheduleWorkoutBeeps();
-        state.useScheduledBeeps = true;
       }
-    } else {
-      state.useScheduledBeeps = false;
     }
     els.btnStart.disabled = true;
     els.btnPause.disabled = false;
@@ -480,9 +434,6 @@
 
   function pause() {
     stopInterval();
-    state.useScheduledBeeps = false;
-    scheduledTimeouts.forEach(function (id) { clearTimeout(id); });
-    scheduledTimeouts = [];
     els.btnStart.disabled = false;
     els.btnPause.disabled = true;
     els.btnStart.textContent = 'Resume';
@@ -491,8 +442,6 @@
 
   function reset() {
     stopInterval();
-    scheduledTimeouts.forEach(function (id) { clearTimeout(id); });
-    scheduledTimeouts = [];
     stopSilentChannel();
     state.phase = PHASE.READY;
     state.currentRound = 0;

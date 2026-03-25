@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Frequentist vs Bayesian Flashcards</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow-x: hidden;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px 20px 40px 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 32px;
+            padding-top: 20px;
+        }
+
+        .header h1 {
+            font-family: 'Playfair Display', serif;
+            font-size: clamp(2em, 5vw, 3em);
+            margin-bottom: 8px;
+            font-weight: 700;
+            letter-spacing: -1px;
+        }
+
+        .header p {
+            font-size: 0.95rem;
+            opacity: 0.7;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .controls {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+            margin-bottom: 32px;
+            flex-wrap: wrap;
+        }
+
+        .filter-btn {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            color: rgba(255, 255, 255, 0.7);
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .filter-btn:hover {
+            background: rgba(255, 255, 255, 0.12);
+            color: white;
+            border-color: rgba(255, 255, 255, 0.25);
+        }
+
+        .filter-btn.active {
+            background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+            color: white;
+            border-color: transparent;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 16px;
+            margin-bottom: 32px;
+        }
+
+        .stat {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 16px;
+            text-align: center;
+            backdrop-filter: blur(10px);
+        }
+
+        .stat-number {
+            font-size: 2rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 4px;
+        }
+
+        .stat-label {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .card-viewport {
+            perspective: 1200px;
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 380px;
+            margin-bottom: 32px;
+        }
+
+        .card {
+            width: 100%;
+            max-width: 700px;
+            height: 380px;
+            cursor: pointer;
+            transition: transform 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            transform-style: preserve-3d;
+            position: relative;
+        }
+
+        .card.flipped {
+            transform: rotateY(180deg);
+        }
+
+        .card-face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            border-radius: 12px;
+            padding: 40px;
+            text-align: center;
+        }
+
+        .card-front {
+            background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 50%, #a78bfa 100%);
+            color: white;
+            box-shadow: 0 20px 50px rgba(59, 130, 246, 0.3);
+        }
+
+        .card-back {
+            background: linear-gradient(135deg, #10b981 0%, #059669 50%, #047857 100%);
+            color: white;
+            transform: rotateY(180deg);
+            text-align: left;
+            overflow-y: auto;
+            overflow-x: hidden;
+            box-shadow: 0 20px 50px rgba(16, 185, 129, 0.3);
+            padding-right: 30px;
+        }
+
+        .card-back::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .card-back::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .card-back::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 3px;
+        }
+
+        .card-back::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .card-label {
+            font-size: 0.75rem;
+            opacity: 0.85;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            font-weight: 600;
+        }
+
+        .card-front h2 {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.8rem;
+            margin-bottom: 16px;
+            font-weight: 700;
+            line-height: 1.2;
+        }
+
+        .card-front p {
+            font-size: 0.95rem;
+            opacity: 0.95;
+            line-height: 1.5;
+        }
+
+        .card-back h3 {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.4rem;
+            margin-bottom: 16px;
+            margin-top: 0;
+            font-weight: 700;
+        }
+
+        .card-back p {
+            font-size: 0.9rem;
+            line-height: 1.6;
+            margin-bottom: 12px;
+            opacity: 0.95;
+        }
+
+        .card-back ul {
+            margin-left: 20px;
+            margin-bottom: 12px;
+        }
+
+        .card-back li {
+            font-size: 0.9rem;
+            line-height: 1.6;
+            margin-bottom: 8px;
+            opacity: 0.95;
+        }
+
+        .card-back strong {
+            font-weight: 600;
+            opacity: 1;
+        }
+
+        .navigation {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 24px;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+        }
+
+        .nav-button {
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(139, 92, 246, 0.2));
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            color: rgba(255, 255, 255, 0.8);
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+        }
+
+        .nav-button:hover:not(:disabled) {
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.4), rgba(139, 92, 246, 0.4));
+            color: white;
+            border-color: rgba(255, 255, 255, 0.25);
+            transform: translateY(-2px);
+        }
+
+        .nav-button:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        .progress {
+            color: rgba(255, 255, 255, 0.8);
+            font-weight: 600;
+            font-size: 0.95rem;
+            min-width: 80px;
+            text-align: center;
+        }
+
+        .hint {
+            color: rgba(255, 255, 255, 0.5);
+            text-align: center;
+            font-size: 0.85rem;
+            margin-bottom: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 1.8rem;
+            }
+
+            .card-front h2 {
+                font-size: 1.4rem;
+            }
+
+            .card {
+                height: 340px;
+            }
+
+            .card-face {
+                padding: 30px;
+            }
+
+            .stats {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .card-viewport {
+                min-height: 340px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Frequentist vs Bayesian</h1>
+            <p>Interactive Flashcard Study</p>
+        </div>
+
+        <div class="controls">
+            <button class="filter-btn active" onclick="filterCards('all')">All Cards</button>
+            <button class="filter-btn" onclick="filterCards('frequentist')">Frequentist</button>
+            <button class="filter-btn" onclick="filterCards('bayesian')">Bayesian</button>
+            <button class="filter-btn" onclick="filterCards('comparison')">Comparison</button>
+        </div>
+
+        <div class="stats">
+            <div class="stat">
+                <div class="stat-number" id="showing-cards">35</div>
+                <div class="stat-label">Total Cards</div>
+            </div>
+            <div class="stat">
+                <div class="stat-number" id="current-num">1</div>
+                <div class="stat-label">Current Card</div>
+            </div>
+        </div>
+
+        <div class="card-viewport" id="card-viewport">
+            <div class="card" id="main-card" onclick="flipCard()">
+                <div class="card-face card-front">
+                    <div class="card-label">Concept</div>
+                    <h2 id="question">Click to flip</h2>
+                    <p style="opacity: 0.8; margin-top: 16px;">← Click to reveal answer →</p>
+                </div>
+                <div class="card-face card-back">
+                    <div id="answer"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="navigation">
+            <button class="nav-button" id="prev-btn" onclick="previousCard()">← Previous</button>
+            <div class="progress">
+                <span id="current-card">1</span> / <span id="total-cards-nav">35</span>
+            </div>
+            <button class="nav-button" id="next-btn" onclick="nextCard()">Next →</button>
+        </div>
+
+        <div class="hint">
+            💡 Click cards to flip • Use arrow keys or buttons to navigate • Filter by category above
+        </div>
+    </div>
+
+    <script>
+        const cards = [
+            { category: 'frequentist', question: 'What is Frequentist Analysis?', label: 'Concept', answer: '<h3>Frequentist Analysis</h3><p>An approach to statistics that interprets probability as the long-run frequency of events occurring in repeated experiments under identical conditions.</p><ul><li>Parameters are fixed (unknown) constants</li><li>Data is random and variable</li><li>Focus on sample statistics and population parameters</li><li>Probability relates to hypothetical repetitions</li></ul>' },
+            { category: 'bayesian', question: 'What is Bayesian Analysis?', label: 'Concept', answer: '<h3>Bayesian Analysis</h3><p>An approach to statistics that treats probability as a degree of belief or certainty, using Bayes\' theorem to update beliefs with new data.</p><ul><li>Parameters are random variables with probability distributions</li><li>Data is fixed (what we observed)</li><li>Incorporates prior beliefs and updates them with data</li><li>Provides direct probability statements about parameters</li></ul>' },
+            { category: 'frequentist', question: 'What is a P-value?', label: 'Concept', answer: '<h3>P-value (Frequentist)</h3><p>The probability of observing data at least as extreme as what was actually observed, assuming the null hypothesis is true.</p><ul><li>Used in hypothesis testing</li><li>Often misinterpreted as probability that null is true</li><li>Tells you about the data given the null, not about the parameter</li><li>Common misconception: p-value is NOT the probability of a true effect</li></ul>' },
+            { category: 'bayesian', question: 'What is Bayes\' Theorem?', label: 'Core Formula', answer: '<h3>Bayes\' Theorem</h3><p style="margin-bottom: 16px;"><strong>P(θ|Data) = P(Data|θ) × P(θ) / P(Data)</strong></p><ul><li><strong>P(θ|Data)</strong> = Posterior (what you want)</li><li><strong>P(Data|θ)</strong> = Likelihood (how likely data under parameter)</li><li><strong>P(θ)</strong> = Prior (belief before data)</li><li><strong>P(Data)</strong> = Marginal likelihood (normalizing constant)</li></ul>' },
+            { category: 'bayesian', question: 'What is a Prior Distribution?', label: 'Concept', answer: '<h3>Prior Distribution</h3><p>Your belief about the parameter values before seeing the data.</p><ul><li>Based on previous research, expert knowledge, or assumptions</li><li>Uninformative: Spreads belief equally across parameter space</li><li>Weakly informative: Slight preference, lets data dominate</li><li>Informative: Strong prior beliefs based on prior evidence</li><li>Choice of prior affects posterior distribution</li></ul>' },
+            { category: 'bayesian', question: 'What is a Posterior Distribution?', label: 'Concept', answer: '<h3>Posterior Distribution</h3><p>Your updated belief about the parameter values after observing the data.</p><ul><li>Combines prior beliefs with observed data</li><li>Gives a full probability distribution over parameter values</li><li>Allows direct probability statements like "95% credible interval"</li><li>Becomes the new prior if more data arrives (sequential updating)</li><li>More uncertain parameters have wider posteriors</li></ul>' },
+            { category: 'frequentist', question: 'What is a Confidence Interval?', label: 'Concept', answer: '<h3>Confidence Interval (Frequentist)</h3><p>A range constructed so that if repeated infinitely, it contains the true parameter ~95% of the time.</p><ul><li><strong>NOT:</strong> 95% probability the true value is in this interval</li><li>The interval is fixed; the parameter is fixed (but unknown)</li><li>95% refers to the procedure, not this specific interval</li><li>Either contains the parameter or it doesn\'t (Bayesian: NO)</li><li>More difficult to interpret than credible intervals</li></ul>' },
+            { category: 'bayesian', question: 'What is a Credible Interval?', label: 'Concept', answer: '<h3>Credible Interval (Bayesian)</h3><p>A range containing 95% of the posterior probability distribution.</p><ul><li><strong>Direct interpretation:</strong> 95% probability the true value is in this interval</li><li>Based on posterior distribution after observing data</li><li>Much easier to interpret than confidence intervals</li><li>Different types: Highest Density Interval (HDI), equal-tail, quantile-based</li><li>Changes as new data arrives</li></ul>' },
+            { category: 'comparison', question: 'Parameter: Fixed or Random?', label: 'Key Difference', answer: '<h3>Fundamental Assumption</h3><p><strong>Frequentist:</strong> Parameters are fixed unknown constants. You can only make probability statements about the data, never about the parameter itself.</p><p><strong>Bayesian:</strong> Parameters are random variables with probability distributions. You can directly state probabilities about what the parameter value is.</p><p>This philosophical difference is the root of most other disagreements between the two approaches.</p>' },
+            { category: 'frequentist', question: 'Hypothesis Testing (Frequentist)', label: 'Process', answer: '<h3>Frequentist Hypothesis Testing</h3><p>A procedure for deciding whether to reject a null hypothesis based on a significance level (α).</p><ul><li>Assume null hypothesis (H₀) is true</li><li>Calculate p-value under this assumption</li><li>If p-value < α (usually 0.05), reject the null</li><li>Binary decision: reject or fail to reject</li><li>Cannot quantify probability of alternative hypothesis</li></ul>' },
+            { category: 'bayesian', question: 'What is a Bayes Factor?', label: 'Concept', answer: '<h3>Bayes Factor</h3><p>The ratio of likelihood of data under one hypothesis vs another, weighted by their priors.</p><ul><li>BF > 1: evidence for hypothesis 1</li><li>BF = 3: data is 3x more likely under H1</li><li>BF < 1: evidence for hypothesis 2</li><li>BF ≈ 1: data are ambiguous</li><li>More intuitive and informative than p-values</li></ul>' },
+            { category: 'comparison', question: 'Frequentist: Strengths', label: 'Advantages', answer: '<h3>Frequentist Strengths</h3><ul><li><strong>No priors needed:</strong> More objective, no subjective beliefs required</li><li><strong>Simpler to compute:</strong> Often closed-form solutions exist</li><li><strong>Well-established:</strong> Standard methods widely taught</li><li><strong>Error control:</strong> Can control Type I and Type II error rates</li><li><strong>Good for standard problems:</strong> Excellent for routine analyses</li><li><strong>Widely accepted:</strong> Regulatory agencies prefer frequentist methods</li></ul>' },
+            { category: 'comparison', question: 'Frequentist: Weaknesses', label: 'Limitations', answer: '<h3>Frequentist Limitations</h3><ul><li><strong>Hard to interpret:</strong> P-values are widely misunderstood</li><li><strong>No parameter probabilities:</strong> Can\'t say "95% chance parameter is X"</li><li><strong>Awkward logic:</strong> Uses hypothetical data you didn\'t observe</li><li><strong>Ignores prior knowledge:</strong> Can\'t incorporate existing evidence</li><li><strong>Binary decisions:</strong> Reject/don\'t reject oversimplifies</li><li><strong>Can\'t do sequential testing:</strong> Must pre-specify sample size</li></ul>' },
+            { category: 'comparison', question: 'Bayesian: Strengths', label: 'Advantages', answer: '<h3>Bayesian Strengths</h3><ul><li><strong>Intuitive:</strong> Direct probability statements about parameters</li><li><strong>Incorporates prior knowledge:</strong> Use previous research effectively</li><li><strong>Flexible:</strong> Handles complex models and hierarchical data</li><li><strong>Sequential analysis:</strong> Update beliefs as new data arrives</li><li><strong>Full distribution:</strong> Get uncertainty for any function of parameters</li><li><strong>Decision theory:</strong> Natural framework for optimal decisions</li></ul>' },
+            { category: 'comparison', question: 'Bayesian: Weaknesses', label: 'Limitations', answer: '<h3>Bayesian Limitations</h3><ul><li><strong>Subjectivity:</strong> Choice of prior can influence results</li><li><strong>Computational cost:</strong> Often requires MCMC sampling</li><li><strong>Prior specification:</strong> Difficult to choose appropriate priors</li><li><strong>Expertise needed:</strong> Complex to implement correctly</li><li><strong>Less standardized:</strong> Multiple reasonable approaches</li><li><strong>Sensitivity analysis:</strong> Must verify results aren\'t prior-dependent</li></ul>' },
+            { category: 'bayesian', question: 'What is MCMC?', label: 'Method', answer: '<h3>Markov Chain Monte Carlo</h3><p>Computational technique to sample from posterior when analytical solutions are impossible.</p><ul><li>Creates a chain of parameter samples approximating posterior</li><li>Enables Bayesian analysis of complex models</li><li>Common algorithms: Metropolis-Hastings, Gibbs, Hamiltonian MC</li><li>Must assess convergence and adequate sampling</li><li>Tools: Stan, PyMC, JAGS, WinBUGS, Nimble</li></ul>' },
+            { category: 'comparison', question: 'When to Use Frequentist?', label: 'Guidance', answer: '<h3>Use Frequentist When:</h3><ul><li>Doing simple hypothesis tests</li><li>You want minimal assumptions</li><li>You have no prior information</li><li>Regulatory requirements demand it</li><li>Analyzing continuous outcomes with large samples</li><li>You need quick, standard analyses</li><li>Working within institutional constraints</li></ul>' },
+            { category: 'comparison', question: 'When to Use Bayesian?', label: 'Guidance', answer: '<h3>Use Bayesian When:</h3><ul><li>You have prior information to incorporate</li><li>Need direct probability statements</li><li>Working with complex hierarchical models</li><li>Sequential updating of beliefs is important</li><li>Handling missing data or multiple imputation</li><li>Making predictions on new data</li><li>Designing adaptive trials or experiments</li></ul>' },
+            { category: 'comparison', question: 'The Likelihood Principle', label: 'Philosophy', answer: '<h3>The Likelihood Principle</h3><p>All information in the data relevant to parameters is contained in the likelihood function.</p><ul><li><strong>Bayesian:</strong> Fully respects the principle</li><li><strong>Frequentist:</strong> Violates it by considering hypothetical unobserved data</li><li>Example: Different stopping rules → different p-values, same likelihood</li><li>Philosophical criticism: Why use data you never saw?</li></ul>' },
+            { category: 'frequentist', question: 'Type I and Type II Errors', label: 'Concept', answer: '<h3>Error Types in Hypothesis Testing</h3><p><strong>Type I Error (α):</strong> Rejecting H₀ when it\'s actually true (false positive)</p><p><strong>Type II Error (β):</strong> Failing to reject H₀ when it\'s actually false (false negative)</p><ul><li>Significance level α controls Type I error</li><li>Power = 1 - β controls Type II error</li><li>Trade-off: reducing one often increases other</li><li>Sample size affects both errors</li></ul>' },
+            { category: 'bayesian', question: 'Conjugate Priors', label: 'Technique', answer: '<h3>Conjugate Priors</h3><p>A prior distribution that, when combined with likelihood, yields posterior of the same family.</p><ul><li>Allows analytical solutions (no MCMC needed)</li><li>Beta-Binomial, Gamma-Poisson are classic pairs</li><li>Less flexible but computationally convenient</li><li>Modern work uses non-conjugate priors anyway</li><li>Good for teaching and simple problems</li></ul>' },
+            { category: 'frequentist', question: 'Statistical vs Practical Significance', label: 'Concept', answer: '<h3>Statistical vs Practical Significance</h3><p><strong>Statistical Significance:</strong> Difference is unlikely under null (small p-value)</p><p><strong>Practical Significance:</strong> Difference is large enough to matter in real world</p><ul><li>Large samples can find tiny statistically significant effects</li><li>Tiny effects may not be practically important</li><li>Always consider effect size, not just p-value</li><li>Bayesian posterior gives better context for practical importance</li></ul>' },
+            { category: 'bayesian', question: 'Prior Sensitivity Analysis', label: 'Practice', answer: '<h3>Prior Sensitivity Analysis</h3><p>Testing whether results change dramatically with different priors.</p><ul><li>Try uninformative, weakly informative, different informative priors</li><li>If posterior similar across priors: data dominate results</li><li>If posterior varies greatly: be careful about conclusions</li><li>Helps assess robustness of findings</li><li>Essential practice in Bayesian analysis</li></ul>' },
+            { category: 'comparison', question: 'Posterior Predictive Distribution', label: 'Concept', answer: '<h3>Posterior Predictive Distribution</h3><p>Probability distribution for future observations given past data.</p><ul><li>Integrates over uncertainty in parameters</li><li>Accounts for both parameter and measurement uncertainty</li><li>Used for predictions, model checking, simulation</li><li>Frequentist: Can\'t directly generate this</li><li>Bayesian: Natural output of analysis</li></ul>' },
+            { category: 'frequentist', question: 'Maximum Likelihood Estimation', label: 'Method', answer: '<h3>Maximum Likelihood Estimation (MLE)</h3><p>Find parameter values that maximize probability of observed data.</p><ul><li>Core frequentist approach to estimation</li><li>Choose parameters that make data most likely</li><li>Often has closed-form solutions</li><li>Large-sample properties: unbiased, efficient</li><li>Foundation for hypothesis tests and confidence intervals</li></ul>' },
+            { category: 'bayesian', question: 'Markov Chain Diagnostics', label: 'Practice', answer: '<h3>MCMC Diagnostics</h3><p>Tools to verify MCMC samples adequately represent posterior.</p><ul><li><strong>Trace plots:</strong> Check for mixing and trends</li><li><strong>Autocorrelation:</strong> High correlation = inefficient sampling</li><li><strong>R-hat:</strong> >1.01 indicates convergence failure</li><li><strong>Effective sample size:</strong> Usually much less than total samples</li><li>Essential step before trusting results</li></ul>' },
+            { category: 'comparison', question: 'Objective vs Subjective Probability', label: 'Philosophy', answer: '<h3>Two Views of Probability</h3><p><strong>Objective (Frequentist):</strong> Probability = long-run frequency of events. Only well-defined for repeatable experiments.</p><p><strong>Subjective (Bayesian):</strong> Probability = degree of belief. Can apply to any unknown quantity, even non-repeatable events.</p><ul><li>Different interpretations lead to different methods</li><li>Frequentist struggles with unique historical events</li><li>Bayesian can assign probabilities to anything</li></ul>' },
+            { category: 'frequentist', question: 'Multiple Testing Problem', label: 'Challenge', answer: '<h3>Multiple Comparisons Problem</h3><p>When conducting many hypothesis tests, false positive rate increases dramatically.</p><ul><li>If 20 independent tests at α=0.05: ~1 false positive expected</li><li>Solutions: Bonferroni, Benjamini-Hochberg, Holm correction</li><li>Control Family-Wise Error Rate (FWER) or False Discovery Rate (FDR)</li><li>Bayesian: Multiple testing less problematic (no global error rate)</li></ul>' },
+            { category: 'bayesian', question: 'Hierarchical Models', label: 'Advanced', answer: '<h3>Hierarchical Bayesian Models</h3><p>Multi-level models with priors on priors, capturing natural structure in data.</p><ul><li>Example: Students within schools within districts</li><li>Borrow strength across groups</li><li>Share information appropriately</li><li>Naturally handle unbalanced groups</li><li>Powerful for repeated measures and meta-analysis</li></ul>' },
+            { category: 'comparison', question: 'Regularization in Bayesian Framework', label: 'Concept', answer: '<h3>Bayesian Regularization</h3><p>Using priors to prevent overfitting instead of frequentist penalties.</p><ul><li>Informative priors shrink estimates toward prior mean</li><li>Equivalent to ridge regression, LASSO when using specific priors</li><li>Provides natural interpretation: prior beliefs vs data</li><li>Automatic model selection through priors</li><li>More principled than ad-hoc frequentist penalization</li></ul>' },
+            { category: 'frequentist', question: 'Replication Crisis Connection', label: 'Modern Issue', answer: '<h3>Replication Crisis and Frequentism</h3><p>Many results fail to replicate, partly due to frequentist methodology issues.</p><ul><li>P-hacking: Testing multiple hypotheses to get significant p-value</li><li>HARKing: Hypothesizing after results are known</li><li>Publication bias: Only significant results published</li><li>Small effect sizes masked by noise in small samples</li><li>Bayesian: Explicit assumptions make manipulation harder to hide</li></ul>' },
+            { category: 'bayesian', question: 'Approximate Bayesian Computation', label: 'Advanced', answer: '<h3>Approximate Bayesian Computation (ABC)</h3><p>Approximating posterior when likelihood is intractable.</p><ul><li>Simulate data from candidate parameters</li><li>Accept parameter values producing data similar to observed</li><li>ABC posterior approximates true posterior</li><li>Essential for complex models (ecology, evolution, complex simulations)</li><li>Growing field in modern Bayesian statistics</li></ul>' },
+            { category: 'comparison', question: 'Effect Size and Uncertainty', label: 'Modern Practice', answer: '<h3>Reporting Uncertainty Properly</h3><p><strong>Frequentist:</strong> Report point estimate ± 95% CI with p-value</p><p><strong>Bayesian:</strong> Report posterior median with 95% credible interval</p><ul><li>Avoid just reporting p < 0.05</li><li>Effect size matters more than p-value</li><li>Visual displays of uncertainty valuable</li><li>Consider practical significance alongside statistical significance</li></ul>' },
+            { category: 'frequentist', question: 'Sample Size Planning', label: 'Design', answer: '<h3>Frequentist Sample Size</h3><p>Determining sample size before experiment based on Type I/II errors.</p><ul><li>Specify: desired power (1-β), significance level (α), effect size</li><li>Larger effect sizes require smaller samples</li><li>Trade-off between cost and precision</li><li>Common: 80% power, α=0.05</li><li>Underpower studies waste resources and mislead</li></ul>' },
+            { category: 'bayesian', question: 'Bayesian Adaptive Design', label: 'Design', answer: '<h3>Bayesian Adaptive Designs</h3><p>Designs that change as data accumulate based on posterior distributions.</p><ul><li>Stop early if clear evidence for efficacy/futility</li><li>Reallocate to better-performing arms dynamically</li><li>More efficient than fixed frequentist designs</li><li>Common in clinical trials (response-adaptive designs)</li><li>Can reach conclusions with fewer subjects</li></ul>' },
+            { category: 'comparison', question: 'Philosophy: Likelihood vs Frequentism', label: 'Advanced', answer: '<h3>Likelihood Approach (Neither/Both)</h3><p>Alternative that respects likelihood principle without full Bayesian formalism.</p><ul><li>Likelihood function contains all information about parameter</li><li>Compare models via likelihood ratio</li><li>No explicit prior (but implicit assumptions)</li><li>No explicit posterior probability statements</li><li>Middle ground between frequentist and Bayesian</li></ul>' }
+        ];
+
+        let currentCardIndex = 0;
+        let filteredIndices = [];
+        let currentFilter = 'all';
+
+        function updateFilteredCards() {
+            if (currentFilter === 'all') {
+                filteredIndices = cards.map((_, i) => i);
+            } else {
+                filteredIndices = cards.map((card, i) => card.category === currentFilter ? i : -1).filter(i => i !== -1);
+            }
+            document.getElementById('total-cards-nav').textContent = filteredIndices.length;
+            document.getElementById('showing-cards').textContent = filteredIndices.length;
+            currentCardIndex = 0;
+            showCard(0);
+        }
+
+        function filterCards(category) {
+            currentFilter = category;
+            updateFilteredCards();
+            document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+        }
+
+        function showCard(index) {
+            if (filteredIndices.length === 0) return;
+            currentCardIndex = Math.max(0, Math.min(index, filteredIndices.length - 1));
+            const cardData = cards[filteredIndices[currentCardIndex]];
+            document.getElementById('question').textContent = cardData.question;
+            document.querySelector('.card-label').textContent = cardData.label;
+            document.getElementById('answer').innerHTML = cardData.answer;
+            document.getElementById('current-card').textContent = currentCardIndex + 1;
+            const card = document.getElementById('main-card');
+            card.classList.remove('flipped');
+            document.getElementById('prev-btn').disabled = currentCardIndex === 0;
+            document.getElementById('next-btn').disabled = currentCardIndex === filteredIndices.length - 1;
+        }
+
+        function nextCard() { showCard(currentCardIndex + 1); }
+        function previousCard() { showCard(currentCardIndex - 1); }
+        function flipCard() { document.getElementById('main-card').classList.toggle('flipped'); }
+
+        updateFilteredCards();
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight') nextCard();
+            if (e.key === 'ArrowLeft') previousCard();
+            if (e.key === ' ') { e.preventDefault(); flipCard(); }
+        });
+    </script>
+</body>
+</html>

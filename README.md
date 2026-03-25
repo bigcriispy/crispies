@@ -2,6 +2,10 @@
 
 Repo for small web apps and tools.
 
+## Fantasy Basketball
+
+Per-game stats analyzer with configurable league scoring lives in [`fantasy-basketball/`](fantasy-basketball/). Set your points-per-stat and see fantasy PPG for each player.
+
 ## HIIT Timer
 
 A mobile-friendly HIIT workout timer lives in [`timer/`](timer/).

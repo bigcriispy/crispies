@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Daily Tasks</title>
+
+<!-- PWA Meta Tags -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Daily Tasks">
+<meta name="theme-color" content="#1A1610">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="description" content="A beautiful daily task manager that resets every day.">
+
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" sizes="192x192" href="icons/icon-192.png">
+<link rel="apple-touch-icon" sizes="512x512" href="icons/icon-512.png">
+
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,500;0,9..144,700;1,9..144,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+
+<style>
+  :root {
+    --bg: #F5F0E8;
+    --card: #FFFDF9;
+    --ink: #1A1610;
+    --muted: #8A8070;
+    --accent: #E8612A;
+    --accent-light: #FDF0EA;
+    --routine: #5B6EBF;
+    --routine-light: #EEF0FA;
+    --success: #3D8B5E;
+    --success-light: #EAF5F0;
+    --line: #E8E0D0;
+    --shadow: 0 2px 16px rgba(26,22,16,0.08);
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; overflow: hidden; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--ink); }
+
+  .app-shell {
+    height: 100%;
+    background: var(--bg);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .status-area { background: var(--bg); padding-top: var(--safe-top); flex-shrink: 0; }
+
+  /* ── Tab Toggle ── */
+  .tab-bar { padding: 14px 24px 0; flex-shrink: 0; }
+
+  .tab-toggle {
+    display: flex;
+    background: var(--line);
+    border-radius: 14px;
+    padding: 3px;
+    gap: 2px;
+  }
+
+  .tab-btn {
+    flex: 1;
+    padding: 9px 8px;
+    border: none;
+    border-radius: 11px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+    background: transparent;
+    color: var(--muted);
+    -webkit-appearance: none;
+    white-space: nowrap;
+  }
+
+  .tab-btn.active {
+    background: var(--card);
+    color: var(--ink);
+    box-shadow: 0 1px 6px rgba(26,22,16,0.12);
+  }
+
+  .tab-btn.active.routine-tab { color: var(--routine); }
+
+  /* ── App content ── */
+  .app {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    padding: 16px 24px 0;
+    padding-bottom: calc(16px + var(--safe-bottom));
+  }
+
+  /* ── Header ── */
+  .header { margin-bottom: 18px; flex-shrink: 0; }
+
+  .day-label {
+    font-family: 'Fraunces', serif;
+    font-size: 11px; font-weight: 500;
+    letter-spacing: 2px; text-transform: uppercase;
+    color: var(--muted); margin-bottom: 2px;
+  }
+
+  .header-title {
+    font-family: 'Fraunces', serif;
+    font-size: 32px; font-weight: 700;
+    color: var(--ink); line-height: 1.1; letter-spacing: -1px;
+    transition: color 0.3s;
+  }
+
+  .progress-wrap {
+    margin-top: 12px; background: var(--line);
+    border-radius: 6px; height: 6px; overflow: hidden;
+  }
+
+  .progress-bar {
+    height: 100%; border-radius: 6px;
+    transition: width 0.5s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.3s;
+    background: var(--accent);
+  }
+
+  .progress-bar.routine-bar { background: var(--routine); }
+  .progress-text { font-size: 12px; color: var(--muted); margin-top: 6px; }
+
+  /* ── Task list ── */
+  .task-list {
+    flex: 1; overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    margin: 0 -4px; padding: 0 4px 12px;
+  }
+
+  .task-list::-webkit-scrollbar { display: none; }
+
+  .task-item {
+    background: var(--card);
+    border-radius: 16px; padding: 14px 16px;
+    margin-bottom: 10px;
+    display: flex; align-items: center; gap: 12px;
+    box-shadow: var(--shadow);
+    transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+    cursor: pointer; position: relative; overflow: hidden;
+    -webkit-user-select: none; user-select: none;
+  }
+
+  .task-item.completed { background: var(--success-light); transform: scale(0.97); opacity: 0.75; }
+
+  .task-item.completing { animation: checkBounce 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); }
+
+  @keyframes checkBounce {
+    0% { transform: scale(1); } 40% { transform: scale(1.04); } 100% { transform: scale(0.97); }
+  }
+
+  .task-check {
+    width: 26px; height: 26px; border-radius: 50%;
+    border: 2px solid var(--line);
+    flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+    transition: all 0.3s ease; background: transparent;
+  }
+
+  .task-item.completed .task-check { background: var(--success); border-color: var(--success); }
+  .task-item.routine-item .task-check { border-color: #C8CDED; }
+  .task-item.routine-item.completed .task-check { background: var(--routine); border-color: var(--routine); }
+
+  .check-icon {
+    opacity: 0; transform: scale(0);
+    transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+    color: white; font-size: 13px;
+  }
+
+  .task-item.completed .check-icon { opacity: 1; transform: scale(1); }
+
+  .task-text {
+    font-size: 15px; font-weight: 400;
+    color: var(--ink); line-height: 1.4; flex: 1; transition: all 0.3s ease;
+  }
+
+  .task-item.completed .task-text { text-decoration: line-through; color: var(--muted); }
+
+  .task-tag {
+    font-size: 10px; font-weight: 500; letter-spacing: 0.5px;
+    text-transform: uppercase; padding: 3px 8px; border-radius: 20px; flex-shrink: 0;
+  }
+
+  .tag-carried { background: var(--accent-light); color: var(--accent); }
+
+  /* Delete button (revealed by long press) */
+  .delete-btn {
+    width: 28px; height: 28px; border-radius: 50%;
+    background: #FDECEA; border: none; color: #C0392B;
+    font-size: 18px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; opacity: 0; transform: scale(0.7);
+    transition: all 0.2s ease; line-height: 1; padding: 0;
+  }
+
+  .task-item.edit-mode .delete-btn { opacity: 1; transform: scale(1); }
+
+  /* ── Add area ── */
+  .add-area { padding-top: 12px; flex-shrink: 0; border-top: 1px solid var(--line); }
+  .add-row { display: flex; gap: 8px; align-items: center; }
+
+  .add-input {
+    flex: 1; background: var(--card);
+    border: 1.5px solid var(--line);
+    border-radius: 14px; padding: 13px 16px;
+    font-family: 'DM Sans', sans-serif; font-size: 16px; color: var(--ink);
+    outline: none; transition: border-color 0.2s; -webkit-appearance: none;
+  }
+
+  .add-input:focus { border-color: var(--accent); }
+  .add-input.routine-mode:focus { border-color: var(--routine); }
+  .add-input::placeholder { color: var(--muted); }
+
+  .add-btn {
+    width: 48px; height: 48px; border-radius: 14px;
+    background: var(--accent); border: none; color: white; font-size: 24px;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    transition: transform 0.2s, background 0.3s;
+    flex-shrink: 0; -webkit-appearance: none;
+  }
+
+  .add-btn.routine-mode { background: var(--routine); }
+  .add-btn:active { transform: scale(0.90); }
+
+  .routine-hint {
+    font-size: 11px; color: var(--muted);
+    margin-top: 8px; text-align: center;
+    height: 0; overflow: hidden; transition: height 0.2s;
+  }
+
+  .routine-hint.visible { height: 18px; }
+
+  /* ── Overlays ── */
+  .overlay {
+    position: absolute; inset: 0;
+    background: rgba(26,22,16,0.55);
+    backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+    display: flex; align-items: flex-end;
+    z-index: 100; animation: fadeIn 0.25s ease;
+  }
+
+  .overlay.hidden { display: none; }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+  .sheet {
+    background: var(--card);
+    border-radius: 28px 28px 0 0;
+    padding: 28px 24px;
+    padding-bottom: calc(28px + var(--safe-bottom));
+    width: 100%;
+    animation: slideUp 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+
+  .sheet-handle { width: 36px; height: 4px; background: var(--line); border-radius: 4px; margin: 0 auto 20px; }
+  .sheet-title { font-family: 'Fraunces', serif; font-size: 22px; font-weight: 700; color: var(--ink); margin-bottom: 8px; }
+  .sheet-body { font-size: 14px; color: var(--muted); line-height: 1.6; margin-bottom: 16px; }
+
+  .missed-list {
+    background: var(--bg); border-radius: 14px; padding: 4px 0;
+    margin-bottom: 16px; max-height: 200px;
+    overflow-y: auto; -webkit-overflow-scrolling: touch;
+  }
+
+  .missed-item {
+    padding: 12px 14px; font-size: 14px; color: var(--ink);
+    border-bottom: 1px solid var(--line);
+    display: flex; align-items: center; gap: 10px; cursor: pointer;
+    -webkit-user-select: none; user-select: none;
+  }
+
+  .missed-item:last-child { border-bottom: none; }
+
+  .missed-check {
+    width: 22px; height: 22px; border: 2px solid var(--line);
+    border-radius: 6px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s; font-size: 12px; color: white;
+  }
+
+  .missed-item.selected .missed-check { background: var(--accent); border-color: var(--accent); }
+
+  .sheet-actions { display: flex; gap: 10px; }
+
+  .btn {
+    flex: 1; padding: 15px; border-radius: 14px; border: none;
+    font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 500;
+    cursor: pointer; transition: transform 0.2s; -webkit-appearance: none;
+  }
+
+  .btn:active { transform: scale(0.96); }
+  .btn-ghost { background: var(--bg); color: var(--muted); }
+  .btn-primary { background: var(--accent); color: white; }
+
+  /* ── High Five ── */
+  .highfive-overlay {
+    position: absolute; inset: 0; background: var(--ink);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    z-index: 200; animation: popIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  .highfive-overlay.hidden { display: none; }
+
+  @keyframes popIn { from { opacity: 0; transform: scale(0.92); } to { opacity: 1; transform: scale(1); } }
+
+  .hf-emoji { font-size: 88px; animation: wave 0.8s ease infinite alternate; margin-bottom: 24px; }
+
+  @keyframes wave {
+    from { transform: rotate(-15deg) scale(1); }
+    to { transform: rotate(15deg) scale(1.1); }
+  }
+
+  .hf-title { font-family: 'Fraunces', serif; font-size: 40px; font-weight: 700; color: white; margin-bottom: 10px; text-align: center; }
+  .hf-sub { font-size: 15px; color: rgba(255,255,255,0.5); text-align: center; max-width: 240px; line-height: 1.6; }
+
+  .hf-btn {
+    margin-top: 40px; background: var(--accent); color: white;
+    border: none; border-radius: 50px; padding: 16px 40px;
+    font-family: 'DM Sans', sans-serif; font-size: 16px; font-weight: 500;
+    cursor: pointer; transition: transform 0.2s; -webkit-appearance: none;
+  }
+
+  .hf-btn:active { transform: scale(0.95); }
+
+  .confetti { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+
+  .dot { position: absolute; border-radius: 2px; animation: fall linear infinite; }
+
+  @keyframes fall {
+    0% { transform: translateY(-20px) rotate(0deg); opacity: 1; }
+    100% { transform: translateY(110vh) rotate(720deg); opacity: 0; }
+  }
+
+  /* ── Empty ── */
+  .empty-state { text-align: center; padding: 50px 20px; color: var(--muted); }
+  .empty-icon { font-size: 36px; margin-bottom: 12px; }
+  .empty-text { font-size: 14px; line-height: 1.7; }
+
+  /* ── Install banner ── */
+  .install-banner {
+    position: absolute; top: calc(var(--safe-top) + 8px);
+    left: 12px; right: 12px;
+    background: var(--ink); color: white;
+    border-radius: 14px; padding: 12px 16px;
+    display: flex; align-items: center; gap: 12px;
+    z-index: 300; box-shadow: 0 8px 30px rgba(0,0,0,0.3);
+    animation: slideDown 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  .install-banner.hidden { display: none; }
+
+  @keyframes slideDown { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+  .install-text { flex: 1; font-size: 13px; line-height: 1.4; }
+  .install-text strong { display: block; font-size: 14px; margin-bottom: 2px; }
+  .install-close { background: none; border: none; color: rgba(255,255,255,0.5); font-size: 20px; cursor: pointer; padding: 0 4px; line-height: 1; }
+
+  /* ── Slide transition ── */
+  .slide-right { animation: slideRight 0.26s cubic-bezier(0.4,0,0.2,1); }
+  .slide-left  { animation: slideLeft  0.26s cubic-bezier(0.4,0,0.2,1); }
+
+  @keyframes slideRight { from { opacity: 0; transform: translateX(16px);  } to { opacity: 1; transform: translateX(0); } }
+  @keyframes slideLeft  { from { opacity: 0; transform: translateX(-16px); } to { opacity: 1; transform: translateX(0); } }
+</style>
+</head>
+<body>
+
+<div class="app-shell">
+  <div class="status-area"></div>
+
+  <!-- Install hint -->
+  <div class="install-banner hidden" id="installBanner">
+    <span>📲</span>
+    <div class="install-text">
+      <strong>Add to Home Screen</strong>
+      Tap Share → "Add to Home Screen" for the full app experience.
+    </div>
+    <button class="install-close" onclick="document.getElementById('installBanner').classList.add('hidden')">×</button>
+  </div>
+
+  <!-- Tab bar -->
+  <div class="tab-bar">
+    <div class="tab-toggle">
+      <button class="tab-btn active" id="tabToday" onclick="switchTab('today')">📋 Today's Tasks</button>
+      <button class="tab-btn routine-tab" id="tabRoutine" onclick="switchTab('routine')">🔁 Daily Routines</button>
+    </div>
+  </div>
+
+  <!-- Main app -->
+  <div class="app">
+    <div class="header">
+      <div class="day-label" id="dayLabel">Tuesday</div>
+      <div class="header-title" id="headerTitle">Today's<br>Tasks</div>
+      <div class="progress-wrap">
+        <div class="progress-bar" id="progressBar" style="width:0%"></div>
+      </div>
+      <div class="progress-text" id="progressText">No tasks yet</div>
+    </div>
+
+    <div class="task-list" id="taskList"></div>
+
+    <div class="add-area">
+      <div class="add-row">
+        <input class="add-input" id="addInput" type="text" placeholder="Add a task…" maxlength="80" autocomplete="off" autocorrect="off">
+        <button class="add-btn" id="addBtn" onclick="addItem()">+</button>
+      </div>
+      <div class="routine-hint" id="routineHint">Hold any routine to delete it</div>
+    </div>
+  </div>
+
+  <!-- Missed tasks sheet -->
+  <div class="overlay hidden" id="missedOverlay">
+    <div class="sheet">
+      <div class="sheet-handle"></div>
+      <div class="sheet-title">Yesterday's Leftovers</div>
+      <div class="sheet-body">You had some unfinished tasks. Want to carry any into today?</div>
+      <div class="missed-list" id="missedList"></div>
+      <div class="sheet-actions">
+        <button class="btn btn-ghost" onclick="dismissMissed()">Skip</button>
+        <button class="btn btn-primary" onclick="addMissed()">Add Selected</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- High five screen -->
+  <div class="highfive-overlay hidden" id="highfiveScreen">
+    <div class="confetti" id="confetti"></div>
+    <div class="hf-emoji" id="hfEmoji">🙌</div>
+    <div class="hf-title" id="hfTitle">High Five!</div>
+    <div class="hf-sub" id="hfSub">You crushed every task today. That's no small thing.</div>
+    <button class="hf-btn" onclick="dismissHighFive()">Back to List</button>
+  </div>
+</div>
+
+<script>
+  // ── Keys ──
+  const TODAY_KEY        = 'dt_tasks_today';
+  const DATE_KEY         = 'dt_last_date';
+  const YESTERDAY_KEY    = 'dt_tasks_yesterday';
+  const ROUTINE_KEY      = 'dt_routines';
+  const ROUTINE_DONE_KEY = 'dt_routine_done';
+  const ROUTINE_DATE_KEY = 'dt_routine_date';
+
+  // ── State ──
+  let tasks = [];
+  let routines = [];
+  let routineDone = new Set();
+  let missedSelected = new Set();
+  let activeTab = 'today';
+  let longPressTimer = null;
+  let hifiveShownFor = null;
+
+  // ── Utils ──
+  const todayStr = () => new Date().toDateString();
+  const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2);
+  const esc = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+
+  // ── Persistence ──
+  function loadTasks()    { try { return JSON.parse(localStorage.getItem(TODAY_KEY))   || []; } catch { return []; } }
+  function saveTasks()    { localStorage.setItem(TODAY_KEY, JSON.stringify(tasks)); }
+  function loadRoutines() { try { return JSON.parse(localStorage.getItem(ROUTINE_KEY)) || []; } catch { return []; } }
+  function saveRoutines() { localStorage.setItem(ROUTINE_KEY, JSON.stringify(routines)); }
+
+  function loadRoutineDone() {
+    if (localStorage.getItem(ROUTINE_DATE_KEY) !== todayStr()) {
+      localStorage.setItem(ROUTINE_DATE_KEY, todayStr());
+      localStorage.removeItem(ROUTINE_DONE_KEY);
+      return new Set();
+    }
+    try { return new Set(JSON.parse(localStorage.getItem(ROUTINE_DONE_KEY)) || []); } catch { return new Set(); }
+  }
+
+  function saveRoutineDone() {
+    localStorage.setItem(ROUTINE_DONE_KEY, JSON.stringify([...routineDone]));
+    localStorage.setItem(ROUTINE_DATE_KEY, todayStr());
+  }
+
+  function loadYesterday() { try { return JSON.parse(localStorage.getItem(YESTERDAY_KEY)) || []; } catch { return []; } }
+
+  function checkDayReset() {
+    const last = localStorage.getItem(DATE_KEY);
+    if (last && last !== todayStr()) {
+      const missed = loadTasks().filter(t => !t.done);
+      localStorage.setItem(YESTERDAY_KEY, JSON.stringify(missed));
+      localStorage.removeItem(TODAY_KEY);
+    }
+    localStorage.setItem(DATE_KEY, todayStr());
+    return loadYesterday();
+  }
+
+  // ── Init ──
+  function init() {
+    const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+    document.getElementById('dayLabel').textContent = days[new Date().getDay()];
+
+    const missed = checkDayReset();
+    tasks       = loadTasks();
+    routines    = loadRoutines();
+    routineDone = loadRoutineDone();
+    hifiveShownFor = null;
+
+    render();
+    if (missed.length > 0) showMissedSheet(missed);
+
+    document.getElementById('addInput').addEventListener('keydown', e => {
+      if (e.key === 'Enter') { e.preventDefault(); addItem(); }
+    });
+
+    const standalone = window.navigator.standalone || window.matchMedia('(display-mode: standalone)').matches;
+    if (!standalone && !localStorage.getItem('install_dismissed')) {
+      setTimeout(() => document.getElementById('installBanner').classList.remove('hidden'), 1500);
+    }
+
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+    }
+  }
+
+  // ── Tab switch ──
+  function switchTab(tab) {
+    if (tab === activeTab) return;
+    const goingRight = (tab === 'routine');
+    activeTab = tab;
+
+    document.getElementById('tabToday').classList.toggle('active', tab === 'today');
+    document.getElementById('tabRoutine').classList.toggle('active', tab === 'routine');
+
+    const listEl = document.getElementById('taskList');
+    const cls = goingRight ? 'slide-right' : 'slide-left';
+    listEl.classList.add(cls);
+    setTimeout(() => listEl.classList.remove(cls), 300);
+
+    const input  = document.getElementById('addInput');
+    const btn    = document.getElementById('addBtn');
+    const hint   = document.getElementById('routineHint');
+
+    if (tab === 'routine') {
+      input.placeholder = 'Add a daily routine…';
+      input.className   = 'add-input routine-mode';
+      btn.className     = 'add-btn routine-mode';
+      hint.classList.add('visible');
+    } else {
+      input.placeholder = 'Add a task…';
+      input.className   = 'add-input';
+      btn.className     = 'add-btn';
+      hint.classList.remove('visible');
+    }
+
+    render();
+  }
+
+  // ── Render dispatcher ──
+  function render() {
+    activeTab === 'today' ? renderToday() : renderRoutines();
+  }
+
+  // ── Today ──
+  function renderToday() {
+    document.getElementById('headerTitle').innerHTML = "Today's<br>Tasks";
+    document.getElementById('progressBar').className = 'progress-bar';
+
+    const done  = tasks.filter(t => t.done).length;
+    const total = tasks.length;
+    const pct   = total === 0 ? 0 : Math.round((done / total) * 100);
+
+    document.getElementById('progressBar').style.width = pct + '%';
+    document.getElementById('progressText').textContent =
+      total === 0 ? 'No tasks yet' : `${done} of ${total} done`;
+
+    const list = document.getElementById('taskList');
+
+    if (!total) {
+      list.innerHTML = `<div class="empty-state">
+        <div class="empty-icon">✦</div>
+        <div class="empty-text">No tasks yet.<br>Add something to get started.</div>
+      </div>`;
+      return;
+    }
+
+    list.innerHTML = '';
+    tasks.forEach((task, i) => {
+      const el = document.createElement('div');
+      el.className = 'task-item' + (task.done ? ' completed' : '');
+      el.innerHTML = `
+        <div class="task-check"><span class="check-icon">✓</span></div>
+        <span class="task-text">${esc(task.text)}</span>
+        ${task.carried ? '<span class="task-tag tag-carried">Carried</span>' : ''}
+      `;
+      el.addEventListener('click', () => toggleToday(i, el));
+      list.appendChild(el);
+    });
+
+    if (total > 0 && done === total && hifiveShownFor !== 'today-' + done) {
+      hifiveShownFor = 'today-' + done;
+      setTimeout(() => showHighFive('today'), 600);
+    }
+  }
+
+  // ── Routines ──
+  function renderRoutines() {
+    document.getElementById('headerTitle').innerHTML = "Daily<br>Routines";
+    document.getElementById('progressBar').className = 'progress-bar routine-bar';
+
+    const total = routines.length;
+    const done  = routines.filter(r => routineDone.has(r.id)).length;
+    const pct   = total === 0 ? 0 : Math.round((done / total) * 100);
+
+    document.getElementById('progressBar').style.width = pct + '%';
+    document.getElementById('progressText').textContent =
+      total === 0 ? 'No routines yet' : `${done} of ${total} done today`;
+
+    const list = document.getElementById('taskList');
+
+    if (!total) {
+      list.innerHTML = `<div class="empty-state">
+        <div class="empty-icon">🔁</div>
+        <div class="empty-text">No daily routines yet.<br>Add things you do every single day.</div>
+      </div>`;
+      return;
+    }
+
+    list.innerHTML = '';
+    routines.forEach(r => {
+      const isDone = routineDone.has(r.id);
+      const el = document.createElement('div');
+      el.className = 'task-item routine-item' + (isDone ? ' completed' : '');
+      el.innerHTML = `
+        <div class="task-check"><span class="check-icon">✓</span></div>
+        <span class="task-text">${esc(r.text)}</span>
+        <button class="delete-btn" data-id="${r.id}">×</button>
+      `;
+
+      // Tap to toggle (unless in edit mode)
+      el.addEventListener('click', e => {
+        if (e.target.classList.contains('delete-btn')) return;
+        if (el.classList.contains('edit-mode')) {
+          el.classList.remove('edit-mode');
+          return;
+        }
+        toggleRoutine(r.id, el);
+      });
+
+      // Delete button
+      el.querySelector('.delete-btn').addEventListener('click', e => {
+        e.stopPropagation();
+        routines = routines.filter(x => x.id !== r.id);
+        routineDone.delete(r.id);
+        saveRoutines();
+        saveRoutineDone();
+        renderRoutines();
+      });
+
+      // Long press to reveal delete
+      el.addEventListener('touchstart', () => {
+        longPressTimer = setTimeout(() => {
+          document.querySelectorAll('.task-item.edit-mode').forEach(x => x.classList.remove('edit-mode'));
+          el.classList.add('edit-mode');
+        }, 500);
+      }, { passive: true });
+      el.addEventListener('touchend',  () => clearTimeout(longPressTimer));
+      el.addEventListener('touchmove', () => clearTimeout(longPressTimer));
+
+      list.appendChild(el);
+    });
+
+    if (total > 0 && done === total && hifiveShownFor !== 'routine-' + done) {
+      hifiveShownFor = 'routine-' + done;
+      setTimeout(() => showHighFive('routine'), 600);
+    }
+  }
+
+  // ── Toggle ──
+  function toggleToday(i, el) {
+    if (tasks[i].done) return;
+    tasks[i].done = true;
+    el.classList.add('completing');
+    saveTasks();
+    setTimeout(() => renderToday(), 350);
+  }
+
+  function toggleRoutine(id, el) {
+    const wasDone = routineDone.has(id);
+    wasDone ? routineDone.delete(id) : routineDone.add(id);
+    if (!wasDone) el.classList.add('completing');
+    saveRoutineDone();
+    setTimeout(() => renderRoutines(), 350);
+  }
+
+  // ── Add ──
+  function addItem() {
+    const input = document.getElementById('addInput');
+    const text  = input.value.trim();
+    if (!text) return;
+
+    if (activeTab === 'today') {
+      tasks.push({ text, done: false, carried: false });
+      saveTasks();
+    } else {
+      routines.push({ id: uid(), text });
+      saveRoutines();
+    }
+
+    input.value = '';
+    render();
+  }
+
+  // ── Missed tasks ──
+  function showMissedSheet(missed) {
+    missedSelected = new Set(missed.map((_, i) => i));
+    const list = document.getElementById('missedList');
+    list.innerHTML = '';
+    missed.forEach((t, i) => {
+      const el = document.createElement('div');
+      el.className = 'missed-item selected';
+      el.innerHTML = `<div class="missed-check">✓</div><span>${esc(t.text)}</span>`;
+      el.addEventListener('click', () => {
+        missedSelected.has(i)
+          ? (missedSelected.delete(i), el.classList.remove('selected'))
+          : (missedSelected.add(i),    el.classList.add('selected'));
+      });
+      list.appendChild(el);
+    });
+    document.getElementById('missedOverlay').classList.remove('hidden');
+    window._missedTasks = missed;
+  }
+
+  function dismissMissed() {
+    localStorage.removeItem(YESTERDAY_KEY);
+    document.getElementById('missedOverlay').classList.add('hidden');
+  }
+
+  function addMissed() {
+    const missed = window._missedTasks || [];
+    missedSelected.forEach(i => tasks.push({ text: missed[i].text, done: false, carried: true }));
+    saveTasks();
+    localStorage.removeItem(YESTERDAY_KEY);
+    document.getElementById('missedOverlay').classList.add('hidden');
+    render();
+  }
+
+  // ── High Five ──
+  function showHighFive(type) {
+    if (type === 'routine') {
+      document.getElementById('hfEmoji').textContent = '🔁';
+      document.getElementById('hfTitle').textContent = 'Routines Done!';
+      document.getElementById('hfSub').textContent   = "Every daily routine checked off. You're on a roll.";
+    } else {
+      document.getElementById('hfEmoji').textContent = '🙌';
+      document.getElementById('hfTitle').textContent = 'High Five!';
+      document.getElementById('hfSub').textContent   = "You crushed every task today. That's no small thing.";
+    }
+    document.getElementById('highfiveScreen').classList.remove('hidden');
+    makeConfetti();
+  }
+
+  function dismissHighFive() {
+    document.getElementById('highfiveScreen').classList.add('hidden');
+  }
+
+  function makeConfetti() {
+    const container = document.getElementById('confetti');
+    container.innerHTML = '';
+    const colors = ['#E8612A','#F5C842','#3D8B5E','#5B6EBF','#D45B8E','#FFFDF9'];
+    for (let i = 0; i < 50; i++) {
+      const dot = document.createElement('div');
+      dot.className = 'dot';
+      dot.style.cssText = `
+        left: ${Math.random()*100}%;
+        background: ${colors[Math.floor(Math.random()*colors.length)]};
+        animation-duration: ${1.5+Math.random()*2.5}s;
+        animation-delay: ${Math.random()*2}s;
+        width: ${6+Math.random()*10}px;
+        height: ${6+Math.random()*10}px;
+      `;
+      container.appendChild(dot);
+    }
+  }
+
+  init();
+</script>
+</body>
+</html>

@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fantasy Basketball — Per Game Analyzer</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+</head>
+<body>
+  <div class="app">
+    <header class="header">
+      <h1>Fantasy Basketball</h1>
+      <p class="tagline">Per-game stats, trends & matchup analysis</p>
+    </header>
+
+    <nav class="tabs" role="tablist">
+      <button type="button" class="tab active" role="tab" aria-selected="true" data-panel="players">Players</button>
+      <button type="button" class="tab" role="tab" aria-selected="false" data-panel="trends">Player trends</button>
+      <button type="button" class="tab" role="tab" aria-selected="false" data-panel="league">My league</button>
+      <button type="button" class="tab" role="tab" aria-selected="false" data-panel="matchup">Me vs opponent</button>
+    </nav>
+
+    <section class="league-settings" aria-labelledby="settings-heading">
+      <button type="button" class="settings-toggle" id="settings-toggle" aria-expanded="true" aria-controls="settings-panel">
+        <span id="settings-heading">League scoring settings</span>
+        <span class="toggle-icon" aria-hidden="true">▼</span>
+      </button>
+      <div class="settings-panel" id="settings-panel">
+        <p class="settings-hint">Points awarded per stat (use negative for TOV). Values are saved in your browser.</p>
+        <div class="settings-grid">
+          <label><span>PTS</span><input type="number" id="pts" step="0.1" value="1" /></label>
+          <label><span>REB</span><input type="number" id="reb" step="0.1" value="1.2" /></label>
+          <label><span>AST</span><input type="number" id="ast" step="0.1" value="1.5" /></label>
+          <label><span>STL</span><input type="number" id="stl" step="0.1" value="3" /></label>
+          <label><span>BLK</span><input type="number" id="blk" step="0.1" value="3" /></label>
+          <label><span>TOV</span><input type="number" id="tov" step="0.1" value="-1" /></label>
+          <label><span>3PM</span><input type="number" id="threes" step="0.1" value="0.5" /></label>
+          <label><span>FGM</span><input type="number" id="fgm" step="0.1" value="0" /></label>
+          <label><span>FGA</span><input type="number" id="fga" step="0.1" value="0" /></label>
+          <label><span>FTM</span><input type="number" id="ftm" step="0.1" value="0" /></label>
+          <label><span>FTA</span><input type="number" id="fta" step="0.1" value="0" /></label>
+        </div>
+        <div class="settings-actions">
+          <button type="button" class="btn btn-secondary" id="reset-settings">Reset to default</button>
+          <button type="button" class="btn btn-primary" id="apply-settings">Apply & recalc</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel" id="panel-players" role="tabpanel">
+    <div class="players-section">
+      <div class="toolbar">
+        <label class="search-wrap">
+          <span class="visually-hidden">Search players</span>
+          <input type="search" id="search" placeholder="Search players…" />
+        </label>
+        <label class="sort-wrap">
+          <span class="visually-hidden">Sort by</span>
+          <select id="sort">
+            <option value="fantasy">Fantasy PPG</option>
+            <option value="pts">PTS</option>
+            <option value="reb">REB</option>
+            <option value="ast">AST</option>
+            <option value="stl">STL</option>
+            <option value="blk">BLK</option>
+            <option value="name">Name</option>
+          </select>
+        </label>
+        <span class="player-count" id="player-count"></span>
+      </div>
+
+      <div class="table-wrap" role="region" aria-label="Player stats table">
+        <table class="players-table">
+          <thead>
+            <tr>
+              <th scope="col">Player</th>
+              <th scope="col">Team</th>
+              <th scope="col" class="num">GP</th>
+              <th scope="col" class="num highlight">Fantasy</th>
+              <th scope="col" class="num">PTS</th>
+              <th scope="col" class="num">REB</th>
+              <th scope="col" class="num">AST</th>
+              <th scope="col" class="num">STL</th>
+              <th scope="col" class="num">BLK</th>
+              <th scope="col" class="num">TOV</th>
+              <th scope="col" class="num">3PM</th>
+              <th scope="col" class="num">FG%</th>
+              <th scope="col" class="num">FT%</th>
+            </tr>
+          </thead>
+          <tbody id="players-body">
+            <!-- filled by JS -->
+          </tbody>
+        </table>
+      </div>
+      <p class="data-note">Sample 2024–25 season data. Replace <code>data/players.json</code> or add an import to use your own stats.</p>
+    </div>
+    </section>
+
+    <section class="panel hidden" id="panel-trends" role="tabpanel" aria-hidden="true">
+      <div class="trends-section card">
+        <h2>Game-by-game performance</h2>
+        <p class="section-desc">Pick a player to see fantasy points per game over time and decide if they’re worth adding.</p>
+        <div class="trends-controls">
+          <label>Player <select id="trend-player"></select></label>
+          <label>Last <input type="number" id="trend-games" min="3" max="50" value="15" /> games</label>
+        </div>
+        <div class="chart-container">
+          <canvas id="chart-trends" aria-label="Fantasy points per game"></canvas>
+        </div>
+        <p class="data-note">Uses <code>data/game-logs.json</code>. Only players with game logs appear in the dropdown.</p>
+      </div>
+    </section>
+
+    <section class="panel hidden" id="panel-league" role="tabpanel" aria-hidden="true">
+      <div class="league-section card">
+        <h2>Upload league teams</h2>
+        <p class="section-desc">Upload a CSV or JSON file with your league’s teams and rosters. Then choose your team and opponent for the matchup view.</p>
+        <div class="upload-zone">
+          <input type="file" id="league-file" accept=".csv,.json,text/csv,application/json" />
+          <button type="button" class="btn btn-secondary" id="load-sample-league">Load sample league</button>
+          <p id="league-file-name" class="file-name">No file chosen</p>
+          <p class="format-hint">CSV: one row per player, columns <code>Team, Player</code>. JSON: <code>{ "teams": [ { "name": "Team A", "players": ["Player 1", ...] } ] }</code></p>
+        </div>
+        <div class="league-teams-wrap" id="league-teams-wrap">
+          <h3>Teams in league</h3>
+          <ul id="league-teams-list"></ul>
+          <div class="team-selectors">
+            <label>My team <select id="my-team"></select></label>
+            <label>Opponent (for matchup chart) <select id="opponent-team"></select></label>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel hidden" id="panel-matchup" role="tabpanel" aria-hidden="true">
+      <div class="matchup-section card">
+        <h2>My team vs opponent over time</h2>
+        <p class="section-desc">Cumulative fantasy points by game date for your team and the selected opponent (from game logs).</p>
+        <div class="chart-container">
+          <canvas id="chart-matchup" aria-label="My team vs opponent fantasy points by date"></canvas>
+        </div>
+        <p class="data-note">Upload league teams and set My team / Opponent in “My league”. Uses game logs for players on those rosters.</p>
+      </div>
+    </section>
+  </div>
+  <script src="app.js"></script>
+</body>
+</html>

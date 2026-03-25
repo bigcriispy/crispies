@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Experimentation Flashcards</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow-x: hidden;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px 20px 40px 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 32px;
+            padding-top: 20px;
+        }
+
+        .header h1 {
+            font-family: 'Playfair Display', serif;
+            font-size: clamp(2em, 5vw, 3em);
+            margin-bottom: 8px;
+            font-weight: 700;
+            letter-spacing: -1px;
+        }
+
+        .header p {
+            font-size: 0.95rem;
+            opacity: 0.7;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .controls {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+            margin-bottom: 32px;
+            flex-wrap: wrap;
+        }
+
+        .filter-btn {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            color: rgba(255, 255, 255, 0.7);
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .filter-btn:hover {
+            background: rgba(255, 255, 255, 0.12);
+            color: white;
+            border-color: rgba(255, 255, 255, 0.25);
+        }
+
+        .filter-btn.active {
+            background: linear-gradient(135deg, #e94560 0%, #f97316 100%);
+            color: white;
+            border-color: transparent;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 16px;
+            margin-bottom: 32px;
+        }
+
+        .stat {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 16px;
+            text-align: center;
+            backdrop-filter: blur(10px);
+        }
+
+        .stat-number {
+            font-size: 2rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #e94560 0%, #f97316 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 4px;
+        }
+
+        .stat-label {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .card-viewport {
+            perspective: 1200px;
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 380px;
+            margin-bottom: 32px;
+        }
+
+        .card {
+            width: 100%;
+            max-width: 700px;
+            height: 380px;
+            cursor: pointer;
+            transition: transform 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            transform-style: preserve-3d;
+            position: relative;
+        }
+
+        .card.flipped {
+            transform: rotateY(180deg);
+        }
+
+        .card-face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            border-radius: 12px;
+            padding: 40px;
+            text-align: center;
+        }
+
+        .card-front {
+            background: linear-gradient(135deg, #e94560 0%, #f97316 50%, #fbbf24 100%);
+            color: white;
+            box-shadow: 0 20px 50px rgba(233, 69, 96, 0.3);
+        }
+
+        .card-back {
+            background: linear-gradient(135deg, #06b6d4 0%, #0891b2 50%, #0e7490 100%);
+            color: white;
+            transform: rotateY(180deg);
+            text-align: left;
+            overflow-y: auto;
+            overflow-x: hidden;
+            box-shadow: 0 20px 50px rgba(6, 182, 212, 0.3);
+            padding-right: 30px;
+        }
+
+        .card-back::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .card-back::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .card-back::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 3px;
+        }
+
+        .card-back::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .card-label {
+            font-size: 0.75rem;
+            opacity: 0.85;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            font-weight: 600;
+        }
+
+        .card-front h2 {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.8rem;
+            margin-bottom: 16px;
+            font-weight: 700;
+            line-height: 1.2;
+        }
+
+        .card-front p {
+            font-size: 0.95rem;
+            opacity: 0.95;
+            line-height: 1.5;
+        }
+
+        .card-back h3 {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.4rem;
+            margin-bottom: 16px;
+            margin-top: 0;
+            font-weight: 700;
+        }
+
+        .card-back p {
+            font-size: 0.9rem;
+            line-height: 1.6;
+            margin-bottom: 12px;
+            opacity: 0.95;
+        }
+
+        .card-back ul {
+            margin-left: 20px;
+            margin-bottom: 12px;
+        }
+
+        .card-back li {
+            font-size: 0.9rem;
+            line-height: 1.6;
+            margin-bottom: 8px;
+            opacity: 0.95;
+        }
+
+        .card-back strong {
+            font-weight: 600;
+            opacity: 1;
+        }
+
+        .navigation {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 24px;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+        }
+
+        .nav-button {
+            background: linear-gradient(135deg, rgba(233, 69, 96, 0.2), rgba(249, 115, 22, 0.2));
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            color: rgba(255, 255, 255, 0.8);
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+        }
+
+        .nav-button:hover:not(:disabled) {
+            background: linear-gradient(135deg, rgba(233, 69, 96, 0.4), rgba(249, 115, 22, 0.4));
+            color: white;
+            border-color: rgba(255, 255, 255, 0.25);
+            transform: translateY(-2px);
+        }
+
+        .nav-button:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        .progress {
+            color: rgba(255, 255, 255, 0.8);
+            font-weight: 600;
+            font-size: 0.95rem;
+            min-width: 80px;
+            text-align: center;
+        }
+
+        .hint {
+            color: rgba(255, 255, 255, 0.5);
+            text-align: center;
+            font-size: 0.85rem;
+            margin-bottom: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 1.8rem;
+            }
+
+            .card-front h2 {
+                font-size: 1.4rem;
+            }
+
+            .card {
+                height: 340px;
+            }
+
+            .card-face {
+                padding: 30px;
+            }
+
+            .stats {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .card-viewport {
+                min-height: 340px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Experimentation</h1>
+            <p>Deep Dive Study Guide</p>
+        </div>
+
+        <div class="controls">
+            <button class="filter-btn active" onclick="filterCards('all')">All Cards</button>
+            <button class="filter-btn" onclick="filterCards('fundamentals')">Fundamentals</button>
+            <button class="filter-btn" onclick="filterCards('design')">Design</button>
+            <button class="filter-btn" onclick="filterCards('analysis')">Analysis</button>
+            <button class="filter-btn" onclick="filterCards('pitfalls')">Pitfalls</button>
+            <button class="filter-btn" onclick="filterCards('sampling')">Sampling</button>
+            <button class="filter-btn" onclick="filterCards('advanced')">Advanced</button>
+        </div>
+
+        <div class="stats">
+            <div class="stat">
+                <div class="stat-number" id="showing-cards">62</div>
+                <div class="stat-label">Total Cards</div>
+            </div>
+            <div class="stat">
+                <div class="stat-number" id="current-num">1</div>
+                <div class="stat-label">Current Card</div>
+            </div>
+        </div>
+
+        <div class="card-viewport" id="card-viewport">
+            <div class="card" id="main-card" onclick="flipCard()">
+                <div class="card-face card-front">
+                    <div class="card-label">Concept</div>
+                    <h2 id="question">Click to flip</h2>
+                    <p style="opacity: 0.8; margin-top: 16px;">← Click to reveal answer →</p>
+                </div>
+                <div class="card-face card-back">
+                    <div id="answer"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="navigation">
+            <button class="nav-button" id="prev-btn" onclick="previousCard()">← Previous</button>
+            <div class="progress">
+                <span id="current-card">1</span> / <span id="total-cards-nav">62</span>
+            </div>
+            <button class="nav-button" id="next-btn" onclick="nextCard()">Next →</button>
+        </div>
+
+        <div class="hint">
+            💡 Click cards to flip • Use arrow keys or buttons to navigate • Filter by category above
+        </div>
+    </div>
+
+    <script>
+        const cards = [
+            // FUNDAMENTALS
+            { category: 'fundamentals', question: 'What is an A/B test?', label: 'Definition', answer: '<h3>A/B Test (Randomized Controlled Trial)</h3><p>An experiment where you randomly divide users into two groups: control (A) receives the current version, treatment (B) receives a new version. You measure outcomes and compare.</p><ul><li><strong>Randomization:</strong> Eliminates selection bias</li><li><strong>Controlled:</strong> Only one variable changes</li><li><strong>Measurable:</strong> Compare outcomes statistically</li><li>Gold standard for causal inference</li><li>Works because randomization balances known and unknown confounders</li></ul>' },
+            { category: 'fundamentals', question: 'Why is randomization critical?', label: 'Principle', answer: '<h3>Why Randomization Matters</h3><p>Randomization creates two groups that are identical in expectation at baseline, except for the treatment.</p><ul><li><strong>Balances confounders:</strong> Both observed and unobserved variables balanced</li><li><strong>Causal inference:</strong> Only randomization allows causal claims</li><li><strong>Alternative:</strong> Observational studies require identifying all confounders (nearly impossible)</li><li>Example: If you let users choose, self-selection bias confounds results</li><li>Without randomization, cannot separate treatment effect from selection effect</li></ul>' },
+            { category: 'fundamentals', question: 'What is the ATE?', label: 'Metric', answer: '<h3>Average Treatment Effect (ATE)</h3><p>The average difference in outcome between treatment and control groups.</p><ul><li><strong>Formula:</strong> ATE = E[Y|T=1] - E[Y|T=0]</li><li>What we care about: "How much does the treatment help on average?"</li><li><strong>Unbiased:</strong> Randomization makes it unbiased estimate of causal effect</li><li><strong>Heterogeneous effects:</strong> ATE is average, some subgroups may benefit more</li><li>Assumes SUTVA: treatment on one user doesn\'t affect another</li></ul>' },
+            { category: 'fundamentals', question: 'What is statistical power?', label: 'Concept', answer: '<h3>Statistical Power</h3><p>The probability of detecting a treatment effect if it truly exists. Power = 1 - β (where β is Type II error rate).</p><ul><li><strong>Typical target:</strong> 80% power (20% Type II error)</li><li><strong>Tradeoff:</strong> Increase sample size → increase power</li><li><strong>Why it matters:</strong> Underpowered studies often fail to detect true effects</li><li><strong>Design:</strong> Calculate required sample size before running experiment</li><li>Powered at 80% means: 1 in 5 chance miss real effect</li></ul>' },
+            { category: 'fundamentals', question: 'What is the difference between power and significance level?', label: 'Distinction', answer: '<h3>Power vs Significance Level (α)</h3><p><strong>Significance level (α):</strong> Probability of false positive (rejecting null when true)</p><ul><li>Typical: α = 0.05 (5% false positive rate)</li><li>This is Type I error</li><li>You control this directly</li></ul><p><strong>Power (1-β):</strong> Probability of true positive (detecting real effect)</p><ul><li>Typical: 80% (20% false negative rate)</li><li>This is 1 minus Type II error</li><li>You control indirectly via sample size</li></ul><p><strong>Key insight:</strong> Different errors, different consequences. False positives costly if you deploy bad features. False negatives costly if you miss good features.</p>' },
+
+            // DESIGN
+            { category: 'design', question: 'What is a minimum detectable effect?', label: 'Design', answer: '<h3>Minimum Detectable Effect (MDE)</h3><p>The smallest effect size your experiment is powered to detect.</p><ul><li><strong>Determines:</strong> How good the improvement must be to matter</li><li><strong>Formula:</strong> Depends on α, power, baseline variance, sample size</li><li>Smaller MDE requires larger sample size (or longer experiment)</li><li><strong>Business decision:</strong> What effect size justifies code deployment and engineer time?</li><li>Example: 1% improvement in conversion might not be worth deploying if it costs 2% engineer time</li></ul>' },
+            { category: 'design', question: 'How do you calculate sample size?', label: 'Calculation', answer: '<h3>Sample Size Calculation</h3><p>Use power analysis to determine required sample size.</p><ul><li><strong>Inputs:</strong> Desired power (usually 80%), significance level (usually 0.05), effect size (MDE), baseline variance</li><li><strong>For conversion rates:</strong> n = (z_α + z_β)² × p(1-p) / effect²</li><li><strong>Key insight:</strong> Sample size needed scales with 1/effect²</li><li>Smaller effects need exponentially more samples</li><li>0.5% improvement needs ~4x more samples than 1% improvement</li></ul>' },
+            { category: 'design', question: 'What is the difference between sequential and fixed sample size testing?', label: 'Design', answer: '<h3>Sequential vs Fixed Sample Size</h3><p><strong>Fixed Sample Size:</strong> Decide sample size beforehand, run experiment until you reach it</p><ul><li>Simple, traditional</li><li>Cannot peek at results before reaching planned size</li><li>Peeking inflates false positive rate (α increases)</li></ul><p><strong>Sequential Testing:</strong> Continuously test as data arrives, can stop early</p><ul><li>More efficient (stop early if clear winner)</li><li>Requires adjustment to p-values (e.g., Pocock boundaries)</li><li>Bayesian naturally sequential (can stop whenever)</li><li>Frequentist requires pre-planned stopping rules</li></ul>' },
+            { category: 'design', question: 'What are guardrail metrics?', label: 'Metrics', answer: '<h3>Guardrail Metrics</h3><p>Secondary metrics you must not harm while optimizing primary metric.</p><ul><li><strong>Primary:</strong> What you want to improve (e.g., conversion rate)</li><li><strong>Guardrails:</strong> What you don\'t want to hurt (e.g., user engagement, load time, revenue)</li><li>Example: Improve sign-up flow (primary) without harming retention (guardrail)</li><li><strong>Why:</strong> Easy to game primary metric while breaking something else</li><li>Monitor all guardrails during experiment</li><li>Don\'t launch if guardrail significantly regresses</li></ul>' },
+            { category: 'design', question: 'What is network effects and SUTVA?', label: 'Assumption', answer: '<h3>SUTVA: Stable Unit Treatment Value Assumption</h3><p>Critical assumption for causal inference: treatment on one unit doesn\'t affect outcome of another unit.</p><ul><li><strong>Violated when:</strong> Network effects (one user\'s treatment affects friends)</li><li><strong>Example problem:</strong> Viral feature experiment on some users affects untreated friends\' behavior</li><li><strong>Solutions:</strong> Cluster randomization (randomize groups, not individuals), geographic randomization, temporal separation</li><li>Often overlooked but critical for social/network products</li></ul>' },
+            { category: 'design', question: 'What is balancing?', label: 'Design', answer: '<h3>Covariate Balancing</h3><p>Checking that treatment and control groups have similar characteristics at baseline.</p><ul><li><strong>Why:</strong> Randomization ensures balance in expectation, but finite samples have variance</li><li><strong>Check:</strong> Compare baseline variables between groups</li><li><strong>If imbalanced:</strong> Use covariate adjustment (ANCOVA) in analysis</li><li><strong>Red flag:</strong> If something looks very different, question your randomization</li><li>Balance sheet: Show pre-treatment characteristics by group</li></ul>' },
+
+            // ANALYSIS
+            { category: 'analysis', question: 'What is the difference between intention-to-treat (ITT) and per-protocol?', label: 'Analysis', answer: '<h3>ITT vs Per-Protocol Analysis</h3><p><strong>Intention-to-Treat (ITT):</strong> Analyze all users in their assigned group, even if they didn\'t receive treatment</p><ul><li>Preserves randomization benefits</li><li>Gives conservative (realistic) effect estimate</li><li>Standard in medical trials and digital experiments</li></ul><p><strong>Per-Protocol:</strong> Only analyze users who actually received assigned treatment</p><ul><li>Can introduce bias if non-compliance is related to outcome</li><li>Generally not recommended</li><li>Used only for exploratory analysis</li></ul><p><strong>Key insight:</strong> ITT is more conservative and preserves causal inference guarantee</p>' },
+            { category: 'analysis', question: 'What is ANCOVA?', label: 'Method', answer: '<h3>ANCOVA (Analysis of Covariance)</h3><p>Regression adjustment for pre-treatment variables to reduce noise and improve efficiency.</p><ul><li><strong>Formula:</strong> Y ~ T + X₁ + X₂ + ... (T=treatment, X=pre-treatment covariates)</li><li><strong>Benefit:</strong> Reduces variance of treatment estimate by controlling noise</li><li><strong>When to use:</strong> When you have highly predictive baseline variables</li><li><strong>Why it works:</strong> Absorbs variation in outcome unrelated to treatment</li><li>Doesn\'t bias treatment effect if covariates pre-treatment</li><li>Example: Control for user age, account age in conversion analysis</li></ul>' },
+            { category: 'analysis', question: 'What is heterogeneous treatment effects (HTE)?', label: 'Advanced', answer: '<h3>Heterogeneous Treatment Effects</h3><p>When treatment effect differs across subgroups. Not all users benefit equally.</p><ul><li><strong>Average:</strong> Feature increases conversion by 1%</li><li><strong>Heterogeneous:</strong> Increases 5% for mobile users, decreases 1% for desktop</li><li><strong>Why it matters:</strong> May want to ship only for high-benefit segments</li><li><strong>How to find:</strong> Subgroup analysis (but increases multiple testing issues)</li><li><strong>Caution:</strong> More subgroups = more noise, higher false positive rate</li><li>Better: Pre-specify subgroups before experiment</li></ul>' },
+            { category: 'analysis', question: 'What is multiple testing correction?', label: 'Pitfall', answer: '<h3>Multiple Comparison Problem</h3><p>When you run many tests, false positive rate compounds.</p><ul><li><strong>Example:</strong> 20 independent tests at α=0.05 → expect ~1 false positive</li><li><strong>Bonferroni:</strong> Divide α by number of tests (conservative, hard to detect)</li><li><strong>Benjamini-Hochberg:</strong> Controls false discovery rate (less conservative)</li><li><strong>Pre-registration:</strong> Specify primary metric before seeing data (best solution)</li><li><strong>In practice:</strong> Clearly distinguish primary vs exploratory findings</li></ul>' },
+            { category: 'analysis', question: 'What is the role of variance reduction?', label: 'Method', answer: '<h3>Variance Reduction Techniques</h3><p>Techniques to reduce noise in treatment effect estimate, improving precision.</p><ul><li><strong>ANCOVA:</strong> Control for pre-treatment variables</li><li><strong>Stratification:</strong> Randomize within blocks (e.g., by country)</li><li><strong>Cuped/Diff-in-Diffs:</strong> Use pre-experiment period as control</li><li><strong>Machine learning:</strong> Predict baseline and remove from outcome</li><li><strong>Benefit:</strong> Smaller required sample size for same power</li><li>Key: Only use pre-treatment information</li></ul>' },
+            { category: 'analysis', question: 'What is CUPED?', label: 'Method', answer: '<h3>CUPED (Controlled-experiment Using Pre-Experiment Data)</h3><p>Use historical data on same users to reduce variance of treatment effect.</p><ul><li><strong>Idea:</strong> Y_adjusted = Y - β × Y_pre, where Y_pre is pre-experiment outcome</li><li><strong>Why it works:</strong> User\'s pre-experiment behavior strongly predicts post-experiment</li><li><strong>Benefit:</strong> Huge variance reduction (2-4x more efficient experiments)</li><li><strong>Key insight:</strong> Removes between-user variation, focuses on treatment-induced change</li><li>Preserves causal inference (uses only pre-treatment data)</li><li>More data → more variance reduction potential</li></ul>' },
+
+            // PITFALLS
+            { category: 'pitfalls', question: 'What is p-hacking?', label: 'Pitfall', answer: '<h3>P-Hacking (Researcher Degrees of Freedom)</h3><p>Manipulating analysis to achieve statistical significance.</p><ul><li><strong>Peeking:</strong> Checking results before reaching sample size</li><li><strong>Selective reporting:</strong> Only reporting metrics that are significant</li><li><strong>Subgroup fishing:</strong> Testing many subgroups, reporting winners</li><li><strong>Post-hoc hypotheses:</strong> Hypothesizing after seeing results (HARKing)</li><li><strong>Consequence:</strong> High false positive rate in published results</li><li><strong>Solution:</strong> Pre-register experiment plan before running</li></ul>' },
+            { category: 'pitfalls', question: 'What is HARKing?', label: 'Pitfall', answer: '<h3>HARKing (Hypothesizing After Results are Known)</h3><p>Formulating hypotheses after analyzing data, then treating them as confirmed.</p><ul><li><strong>Example:</strong> "I found significance in subgroup X, hypothesis confirmed!"</li><li><strong>Problem:</strong> Results are noise-fitted; won\'t replicate</li><li><strong>Why it happens:</strong> Natural to explain unexpected findings post-hoc</li><li><strong>Solution:</strong> Label post-hoc findings as exploratory</li><li><strong>Replication:</strong> Only trust findings replicated in new experiment</li><li>Common in product experiments (backfilling explanations)</li></ul>' },
+            { category: 'pitfalls', question: 'What is the multiple comparisons problem in product experiments?', label: 'Pitfall', answer: '<h3>Multiple Testing in Product Experiments</h3><p>Testing many metrics in one experiment inflates false positive rate.</p><ul><li><strong>Typical product experiment:</strong> 10-50 metrics tracked</li><li><strong>At α=0.05:</strong> Expect 0.5-2.5 false positives just by chance</li><li><strong>Consequence:</strong> Easy to find "winning" metric that\'s actually noise</li><li><strong>Solution 1:</strong> Pre-specify primary metric, treat others as exploratory</li><li><strong>Solution 2:</strong> Bonferroni/Benjamini-Hochberg correction</li><li><strong>Best:</strong> Use Bayesian approach (no multiple testing issue)</li></ul>' },
+            { category: 'pitfalls', question: 'What is survivor bias?', label: 'Pitfall', answer: '<h3>Survivor Bias</h3><p>When you only measure outcome for users who completed an action, missing users who dropped out.</p><ul><li><strong>Example:</strong> A/B test checkout flow by only measuring time-to-checkout for completers (miss users who abandoned)</li><li><strong>Treatment effect:</strong> Might speed up checkout, but more users drop out overall</li><li><strong>Solution:</strong> Measure at full funnel level (% of users starting checkout)</li><li>Common mistake: Measuring average metrics instead of proportion metrics</li><li>Use intent-to-treat: include all users in denominator</li></ul>' },
+            { category: 'pitfalls', question: 'What is regression to the mean?', label: 'Pitfall', answer: '<h3>Regression to the Mean</h3><p>Extreme baseline values tend to move closer to average on next measurement, regardless of treatment.</p><ul><li><strong>Example:</strong> Select high-performing stores for experiment, they perform worse next period (just random variation)</li><li><strong>Why it happens:</strong> Rare events (extreme high/low) often due to luck</li><li><strong>Solution:</strong> Use randomized control group (baseline regression applies equally to both)</li><li>Randomization is only fix; selection bias without it</li><li>Important if choosing "test units" non-randomly</li></ul>' },
+            { category: 'pitfalls', question: 'What is novelty effect?', label: 'Pitfall', answer: '<h3>Novelty Effect</h3><p>Short-term boost in engagement due to new feature, not sustainable long-term.</p><ul><li><strong>Example:</strong> Redesign gets 15% engagement boost for 2 weeks, then returns to baseline</li><li><strong>Why:</strong> Users excited about new interface, then habits normalize</li><li><strong>Solution:</strong> Run experiments long enough (weeks, not days)</li><li><strong>Baseline period:</strong> Need enough data to assess "true" effect</li><li>Common: Short experiments show novelty effect, not real lift</li></ul>' },
+            { category: 'pitfalls', question: 'What is the dangers of optional stopping?', label: 'Pitfall', answer: '<h3>Optional Stopping (Peeking)</h3><p>Checking results before planned sample size and stopping early if significant.</p><ul><li><strong>Consequence:</strong> α inflates dramatically (can reach 20-30%)</li><li><strong>Why:</strong> If you stop at first significance, you\'re biased toward noise</li><li><strong>Example:</strong> Flip coin until you get 10 heads (you\'ll eventually get lucky streaks)</li><li><strong>Solution:</strong> Fix sample size beforehand, don\'t peek</li><li><strong>Exception:</strong> Sequential testing with pre-planned boundaries (Pocock, O\'Brien-Fleming)</li></ul>' },
+            { category: 'pitfalls', question: 'What is carryover effects?', label: 'Pitfall', answer: '<h3>Carryover Effects</h3><p>When treatment on one unit at time t affects outcomes at time t+1.</p><ul><li><strong>Example:</strong> Email campaign test → treated group subscribes, then next week all groups get discount → can\'t separate effects</li><li><strong>Within-user:</strong> User learns from treatment, behavior different in follow-up</li><li><strong>Solution:</strong> Use washout period (time between treatments)</li><li>Problem in repeated experiments on same units</li><li>Especially problematic for learning-based features</li></ul>' },
+
+            // ADVANCED
+            { category: 'advanced', question: 'What is the concept of sensitivity and specificity?', label: 'Advanced', answer: '<h3>Sensitivity vs Specificity</h3><p><strong>Sensitivity:</strong> Probability of detecting effect if it exists (1 - Type II error) = Power</p><p><strong>Specificity:</strong> Probability of not rejecting null when it\'s true (1 - Type I error)</p><ul><li><strong>In experiments:</strong> Sensitivity = power (80% typical), Specificity = 1 - α (95% typical)</li><li><strong>Tradeoff:</strong> Decreasing α increases Type II error (lower power)</li><li><strong>Decision:</strong> What error is more costly? False positive or false negative?</li><li>Most companies minimize false positives (don\'t deploy bad features)</li></ul>' },
+            { category: 'advanced', question: 'What is the difference between effect size, power, sample size, and α?', label: 'Advanced', answer: '<h3>Four Key Experiment Parameters</h3><ul><li><strong>Effect size (MDE):</strong> How big the treatment effect is (you specify or estimate from data)</li><li><strong>Power (1-β):</strong> Probability of detecting effect if exists (typically 80%)</li><li><strong>Sample size (n):</strong> Number of observations needed</li><li><strong>Significance level (α):</strong> Acceptable false positive rate (typically 5%)</li></ul><p>Key insight: Any three determines the fourth</p><ul><li>More power → need more samples</li><li>Smaller effect → need more samples</li><li>Smaller α → need more samples (stricter threshold)</li></ul>' },
+            { category: 'advanced', question: 'What is the concept of degrees of freedom?', label: 'Advanced', answer: '<h3>Degrees of Freedom</h3><p>Number of independent values in a dataset that can vary freely.</p><ul><li><strong>Example:</strong> 100 observations with 2 groups → 98 degrees of freedom (2 constraints: n and group membership)</li><li><strong>Effect on t-test:</strong> Larger df → t-distribution closer to normal</li><li><strong>Why it matters:</strong> Lower df → need larger effect to reach significance</li><li><strong>In power analysis:</strong> Large sample → close to normal, formula simplifies</li><li>Hidden reason small experiments are noisy</li></ul>' },
+            { category: 'advanced', question: 'What is confounding in A/B tests?', label: 'Advanced', answer: '<h3>Confounding Variables</h3><p>A variable that influences both treatment assignment and outcome, creating spurious association.</p><ul><li><strong>Example:</strong> Feature more likely rolled out during high-traffic days → appears to increase traffic (confounded)</li><li><strong>Randomization solution:</strong> Random assignment breaks link between confounder and treatment</li><li><strong>Why randomization works:</strong> Confounders are balanced between groups in expectation</li><li><strong>Unobserved confounders:</strong> Randomization handles these too (key advantage over observational)</li></ul>' },
+            { category: 'advanced', question: 'What is the concept of assignment mechanisms?', label: 'Advanced', answer: '<h3>Assignment Mechanisms</h3><p>How users are assigned to treatment/control, critical for avoiding bias.</p><ul><li><strong>Simple randomization:</strong> Each user has 50% chance treatment (most variable)</li><li><strong>Stratified:</strong> Randomize within groups (e.g., by country)</li><li><strong>Block randomization:</strong> Ensure exactly 50-50 split in blocks</li><li><strong>Adaptive:</strong> Assign more users to better-performing arm (Thompson sampling)</li><li><strong>Key:</strong> Must be objective, not influenced by outcomes or user behavior</li></ul>' },
+            { category: 'advanced', question: 'What is the concept of external validity?', label: 'Advanced', answer: '<h3>External Validity</h3><p>Generalizability of experiment results to broader population or contexts.</p><ul><li><strong>Internal validity:</strong> Can we trust the causal effect within this experiment?</li><li><strong>External validity:</strong> Does this result apply to users outside the experiment?</li><li><strong>Threats:</strong> Selection (who was sampled?), context (when/where?), treatment variation</li><li><strong>Example:</strong> Test on desktop users, desktop effect doesn\'t apply to mobile</li><li><strong>Solution:</strong> Replicate across conditions, look for heterogeneous effects</li></ul>' },
+            { category: 'advanced', question: 'What is the relationship between effect size and practical significance?', label: 'Advanced', answer: '<h3>Effect Size vs Practical Significance</h3><p><strong>Statistical significance:</strong> Effect unlikely due to chance (p < 0.05)</p><p><strong>Practical significance:</strong> Effect large enough to matter in practice</p><ul><li><strong>Key insight:</strong> Statistically significant ≠ practically significant</li><li><strong>Example:</strong> 10M users → detect 0.1% effect (significant), but 0.1% improvement not worth engineering time</li><li><strong>Other direction:</strong> 1000 users → miss 5% effect (not significant), but 5% improvement huge</li><li>Always report effect size, not just p-value</li></ul>' },
+            { category: 'advanced', question: 'What is the concept of stopping boundaries?', label: 'Advanced', answer: '<h3>Stopping Boundaries (Sequential Testing)</h3><p>Pre-planned rules for when to stop experiment early without inflating false positive rate.</p><ul><li><strong>Pocock boundary:</strong> Same critical value at each interim look (simplest)</li><li><strong>O\'Brien-Fleming:</strong> Stricter early boundaries, more lenient late (fewer false positives)</li><li><strong>Lan-DeMets:</strong> Flexible spending of α over time</li><li><strong>Why needed:</strong> Multiple looks inflate α; boundaries keep it fixed</li><li>Bayesian: Naturally sequential, no boundaries needed</li></ul>' },
+            { category: 'advanced', question: 'What is Bayesian decision theory for experiments?', label: 'Advanced', answer: '<h3>Bayesian Decision Theory</h3><p>Framework for making experiment decisions by minimizing expected loss.</p><ul><li><strong>Cost of false positive:</strong> Deploy bad feature (engineering, opportunity cost)</li><li><strong>Cost of false negative:</strong> Miss good feature (lost opportunity)</li><li><strong>Decision rule:</strong> Launch if P(treatment better | data) > threshold</li><li><strong>Threshold depends on costs:</strong> High FP cost → need higher probability (>95%)</li><li>More principled than p < 0.05</li></ul>' },
+            { category: 'advanced', question: 'What is the concept of experimentation strategy?', label: 'Advanced', answer: '<h3>Experimentation Strategy</h3><p>How to allocate experimentation resources across organization.</p><ul><li><strong>Portfolio approach:</strong> Some high-variance (moonshots), some low-variance (incremental)</li><li><strong>Sequential strategy:</strong> Run experiments serially vs parallel</li><li><strong>Replication:</strong> When to replicate vs move to next idea</li><li><strong>Magnitude matters:</strong> Big wins get fast-tracked, small wins need replication</li><li><strong>Organizational:</strong> Central platform vs team autonomy</li></ul>' },
+
+            // ADDITIONAL DEEP CARDS
+            { category: 'design', question: 'What is randomization ratio and how does it affect power?', label: 'Design', answer: '<h3>Randomization Ratio</h3><p>Proportion of users assigned to treatment vs control (e.g., 50-50 vs 90-10).</p><ul><li><strong>50-50 split:</strong> Most efficient (maximum statistical power)</li><li><strong>Unequal split:</strong> e.g., 90-10 treatment, 10 control (loses power but smaller control group)</li><li><strong>Why deviate from 50-50:</strong> Budget constraints, risk aversion (want larger control baseline)</li><li><strong>Power cost:</strong> 90-10 split needs ~3x more samples than 50-50 for same power</li><li><strong>Rule:</strong> Use 50-50 unless you have reason not to</li></ul>' },
+            { category: 'analysis', question: 'What is the difference between absolute and relative lift?', label: 'Metrics', answer: '<h3>Absolute vs Relative Lift</h3><p><strong>Absolute lift:</strong> Difference in outcome (percentage points)</p><ul><li>Control: 10%, Treatment: 12%</li><li>Absolute lift: 12% - 10% = 2 percentage points</li></ul><p><strong>Relative lift:</strong> Percentage increase</p><ul><li>Relative lift: (12% - 10%) / 10% = 20%</li></ul><p><strong>Why both matter:</strong></p><ul><li>Absolute: Practical impact ("2% more conversions")</li><li>Relative: Shows proportional change ("20% improvement")</li><li>Always report both to avoid misleading stakeholders</li></ul>' },
+            { category: 'pitfalls', question: 'What is the peeking problem in detail?', label: 'Pitfall', answer: '<h3>Peeking (Repeated Significance Testing)</h3><p>Checking significance repeatedly until you reach α threshold.</p><ul><li><strong>Math:</strong> Each peek is independent test with α=0.05</li><li><strong>Multiple peeks:</strong> α inflates to 0.05 + 0.05 + ... ≈ 0.20 with 10 peeks</li><li><strong>Equivalent to:</strong> Flipping coin 100 times and reporting "heads" if you see 6+ heads in a row anywhere</li><li><strong>Solution 1:</strong> Commit to sample size beforehand</li><li><strong>Solution 2:</strong> Use sequential testing with boundaries</li><li><strong>Solution 3:</strong> Use Bayesian (no peeking issue)</li></ul>' },
+            { category: 'advanced', question: 'What is intent-to-treat vs treatment-received analysis?', label: 'Analysis', answer: '<h3>ITT vs As-Treated Analysis</h3><p><strong>Intent-to-Treat:</strong> Analyze by original assignment, regardless of actual treatment</p><ul><li>Preserves randomization benefit</li><li>Unbiased causal effect estimate</li><li>More conservative (includes non-compliers diluting effect)</li><li>Standard in medical/RCT literature</li></ul><p><strong>As-Treated/Treatment-Received:</strong> Only analyze users who actually received treatment</p><ul><li>Biased if non-compliance related to outcome</li><li>Not causal (breaks randomization)</li><li>Can inflate effect size artificially</li></ul><p><strong>Best practice:</strong> Always report ITT primary, as-treated as sensitivity</p>' },
+            { category: 'design', question: 'What is the concept of unit of analysis?', label: 'Design', answer: '<h3>Unit of Analysis</h3><p>The level at which randomization and analysis occur.</p><ul><li><strong>User-level:</strong> Randomize individual users (standard for digital)</li><li><strong>Cluster-level:</strong> Randomize groups (e.g., stores, teams)</li><li><strong>Mismatch problem:</strong> If randomize at cluster level but analyze at user level → standard errors too small (inflated false positives)</li><li><strong>Solution:</strong> Use cluster-robust standard errors in analysis</li><li><strong>When needed:</strong> Network effects, spillovers, shared resources</li></ul>' },
+            { category: 'analysis', question: 'What is the role of p-values in decision-making?', label: 'Analysis', answer: '<h3>P-Values in Experimentation</h3><p><strong>What p-value means:</strong> Probability of observing data as extreme as this IF null is true</p><ul><li><strong>NOT:</strong> Probability null is true, probability treatment works, probability to replicate</li><li><strong>Common misinterpretation:</strong> p=0.05 means 5% chance result is wrong (FALSE)</li><li><strong>Better approach:</strong> Report effect size with confidence interval</li><li><strong>Bayesian alternative:</strong> Report posterior probability treatment > control</li><li>P < 0.05 is convention, not magic threshold</li></ul>' },
+            { category: 'advanced', question: 'What is effect heterogeneity and how to estimate it?', label: 'Advanced', answer: '<h3>Heterogeneous Treatment Effects (HTE)</h3><p>Treatment effect varies across subgroups or contexts.</p><ul><li><strong>Detection methods:</strong></li><li><strong>1. Pre-specified subgroups:</strong> Analyze effect within each group (planned in advance)</li><li><strong>2. Regression trees:</strong> Find subgroups with different effects</li><li><strong>3. Causal forests:</strong> ML approach to estimate individual treatment effects</li><li><strong>Caution:</strong> Many subgroups → many false positives</li><li><strong>Best practice:</strong> Pre-specify hypothesized heterogeneity before analyzing</li></ul>' },
+            { category: 'fundamentals', question: 'What is the purpose of a control group?', label: 'Principle', answer: '<h3>Control Group Purpose</h3><p>Baseline to measure treatment effect against. Captures what would happen without treatment.</p><ul><li><strong>Accounts for:</strong> Seasonality, trends, external events</li><li><strong>Without control:</strong> Cannot separate treatment effect from time trends</li><li><strong>Example:</strong> Revenue increases 20% → 10% treatment effect + 10% seasonality</li><li><strong>Common mistake:</strong> Using past as control ("compare to last week")</li><li><strong>Right approach:</strong> Concurrent control group (same period, random split)</li></ul>' },
+            { category: 'pitfalls', question: 'What is selection bias in A/B tests?', label: 'Pitfall', answer: '<h3>Selection Bias</h3><p>When treatment and control differ in characteristics before treatment (breaking randomization).</p><ul><li><strong>Causes:</strong> Bad randomization algorithm, timing issues, device fingerprinting errors</li><li><strong>Example:</strong> Desktop randomization broken → treatment gets more mobile users (mobile converts lower)</li><li><strong>Detection:</strong> Check balance of baseline variables</li><li><strong>Impact:</strong> Biases treatment effect estimate</li><li><strong>Solution:</strong> Verify randomization, use stratified randomization, check balance sheet</li></ul>' },
+
+            // SAMPLING
+            { category: 'sampling', question: 'What is a sampling frame and why does it matter?', label: 'Fundamentals', answer: '<h3>Sampling Frame</h3><p>The complete list of all units from which your sample will be drawn (population).</p><ul><li><strong>Example:</strong> All active users on platform, all customers in database</li><li><strong>Why it matters:</strong> Your sample can only be as good as your frame</li><li><strong>Frame error:</strong> When frame doesn\'t match target population</li><li><strong>Example problem:</strong> Sampling only from email list (misses non-email users)</li><li><strong>Digital advantage:</strong> Can access complete frame (all users in database)</li><li>Physical products: Can\'t sample everyone, must use frame as proxy</li></ul>' },
+            { category: 'sampling', question: 'What is simple random sampling?', label: 'Method', answer: '<h3>Simple Random Sampling</h3><p>Every unit in population has equal probability of being selected.</p><ul><li><strong>How:</strong> Generate random numbers, select units with smallest N</li><li><strong>Advantage:</strong> Unbiased, simple, no hidden assumptions</li><li><strong>Disadvantage:</strong> Can have uneven representation of subgroups by chance</li><li><strong>When to use:</strong> Homogeneous populations, quick sampling, when no subgroups matter</li><li><strong>In A/B tests:</strong> Each user has 50% chance treatment (simple random)</li><li><strong>Variance:</strong> Higher variance than stratified sampling</li></ul>' },
+            { category: 'sampling', question: 'What is stratified random sampling?', label: 'Method', answer: '<h3>Stratified Random Sampling</h3><p>Divide population into strata (subgroups), then randomly sample from each stratum.</p><ul><li><strong>Example:</strong> Divide users by country, age, platform; sample from each</li><li><strong>Proportional allocation:</strong> Sample sizes match population proportions</li><li><strong>Disproportional allocation:</strong> Over-sample small important groups</li><li><strong>Advantages:</strong> Ensures representation of all subgroups, lower variance</li><li><strong>When to use:</strong> When subgroups important, when rare groups exist</li><li><strong>In A/B tests:</strong> Stratify by geography, device, account age</li></ul>' },
+            { category: 'sampling', question: 'What is cluster sampling?', label: 'Method', answer: '<h3>Cluster Sampling</h3><p>Divide population into clusters, randomly select clusters, sample all units in selected clusters.</p><ul><li><strong>Example:</strong> Geographic clusters (cities), then sample all households in selected cities</li><li><strong>Why use:</strong> Reduces cost when population geographically dispersed</li><li><strong>Disadvantage:</strong> Higher variance than simple random (units within cluster correlated)</li><li><strong>Design effect:</strong> Need to adjust sample size for correlation within clusters</li><li><strong>When to use:</strong> Multi-stage sampling, cost constraints, geographic experiments</li><li><strong>In digital:</strong> Rarely used (easy to access all units)</li></ul>' },
+            { category: 'sampling', question: 'What is systematic sampling?', label: 'Method', answer: '<h3>Systematic Sampling</h3><p>Select every kth unit from population (k = N/n, where N=population, n=desired sample).</p><ul><li><strong>Example:</strong> N=10,000 users, want n=100 → select every 100th user</li><li><strong>Advantage:</strong> Simple to implement, quasi-random</li><li><strong>Disadvantage:</strong> If pattern in population matches interval, can be biased</li><li><strong>Example problem:</strong> Every 7th user happens to be from same cohort (biased)</li><li><strong>When to use:</strong> No computer randomization available, lists already sorted randomly</li><li><strong>In digital:</strong> Rarely used (simple random easy with computers)</li></ul>' },
+            { category: 'sampling', question: 'What is quota sampling?', label: 'Method', answer: '<h3>Quota Sampling (Non-Probability)</h3><p>Interviewer/researcher selects units to meet quota targets for subgroups.</p><ul><li><strong>Example:</strong> "Get 100 men, 100 women, 50 rich, 50 poor"</li><li><strong>Disadvantage:</strong> Interviewer bias - selects easiest-to-reach units within quota</li><li><strong>Bias:</strong> Not random within strata, so not representative</li><li><strong>Advantage:</strong> Cheap, fast (no randomization needed)</li><li><strong>When to use:</strong> Quick market research, polling (NOT scientific studies)</li><li><strong>In A/B tests:</strong> Don\'t use (biased and not random)</li><li>Common in surveys: "Call every 5th person you see" (biased)</li></ul>' },
+            { category: 'sampling', question: 'What is convenience sampling?', label: 'Method', answer: '<h3>Convenience Sampling (Non-Probability)</h3><p>Sample the easiest-to-reach units (volunteers, friends, online survey respondents).</p><ul><li><strong>Example:</strong> "Ask users on your app" (selection bias toward engaged users)</li><li><strong>Bias:</strong> Volunteers differ from non-volunteers systematically</li><li><strong>Advantage:</strong> Cheap, fast</li><li><strong>Disadvantage:</strong> Highly biased, cannot generalize</li><li><strong>When to use:</strong> Exploratory research, piloting (NOT final analysis)</li><li><strong>In A/B tests:</strong> Only test on users already on platform (acceptable if measuring in-app metric)</li><li>Common bias: Online surveys get responses from people with time/internet</li></ul>' },
+            { category: 'sampling', question: 'What is snowball sampling?', label: 'Method', answer: '<h3>Snowball Sampling (Non-Probability)</h3><p>Existing study subjects recruit future subjects from their contacts.</p><ul><li><strong>Example:</strong> "Tell your friends to join study"</li><li><strong>When used:</strong> Hard-to-reach populations (homeless, underground communities)</li><li><strong>Bias:</strong> Homophilic bias - people refer similar others</li><li><strong>Advantage:</strong> Only way to reach some populations</li><li><strong>Disadvantage:</strong> Highly biased, uncontrolled</li><li><strong>In A/B tests:</strong> Not applicable (you control all assignments)</li><li>Research: Good for qualitative, bad for quantitative</li></ul>' },
+            { category: 'sampling', question: 'What is two-stage sampling?', label: 'Method', answer: '<h3>Two-Stage Sampling</h3><p>First stage: sample primary units (clusters), second stage: sample secondary units within clusters.</p><ul><li><strong>Example:</strong> Stage 1 - select 10 cities, Stage 2 - select 100 households per city</li><li><strong>Advantage:</strong> Combines cost benefits of cluster + precision of secondary sampling</li><li><strong>Design effect:</strong> Must account for clustering in both stages</li><li><strong>Analysis:</strong> Use cluster-robust standard errors</li><li><strong>When to use:</strong> Geographic or hierarchical experiments (stores within regions)</li><li>Common in surveys: Sample regions, then counties, then households</li></ul>' },
+            { category: 'sampling', question: 'What is importance sampling?', label: 'Advanced', answer: '<h3>Importance Sampling</h3><p>Sample more frequently from important parts of distribution, weight results to correct bias.</p><ul><li><strong>Example:</strong> Want to estimate rare event (fraud), oversample fraudulent transactions, downweight them in analysis</li><li><strong>Why:</strong> Rare events: naïve sampling wastes data on unimportant cases</li><li><strong>Key:</strong> Must know importance weights to correct bias</li><li><strong>Advantage:</strong> Efficient for rare events, skewed distributions</li><li><strong>Disadvantage:</strong> Need to specify importance function correctly</li><li>Machine learning: Active learning, anomaly detection</li></ul>' },
+            { category: 'sampling', question: 'What is rejection sampling?', label: 'Advanced', answer: '<h3>Rejection Sampling</h3><p>Sample from easy distribution, reject samples with low probability under target distribution.</p><ul><li><strong>Method:</strong> Sample X from proposal distribution, accept with probability P(X)/max(P)</li><li><strong>Why:</strong> Target distribution hard to sample from directly</li><li><strong>Advantage:</strong> Simple, produces exact samples</li><li><strong>Disadvantage:</strong> Inefficient if acceptance rate low (throw away samples)</li><li><strong>Related:</strong> MCMC is generalization that doesn\'t require knowing max(P)</li><li>Used in Bayesian inference, MCMC</li></ul>' },
+            { category: 'sampling', question: 'What is the difference between population parameter and sample statistic?', label: 'Fundamentals', answer: '<h3>Parameter vs Statistic</h3><p><strong>Population Parameter:</strong> True value in entire population (unknown)</p><ul><li>Example: True conversion rate of all users = 10%</li><li>Never observed directly (can\'t measure everyone)</li></ul><p><strong>Sample Statistic:</strong> Value computed from sample (known)</p><ul><li>Example: Conversion rate in sample = 10.3%</li><li>Used to estimate parameter</li></ul><p><strong>Standard error:</strong> Variability of statistic across repeated samples</p><ul><li>Smaller sample → larger standard error</li><li>Larger sample → smaller standard error</li></ul><p><strong>Key insight:</strong> Sample statistics vary; parameters are fixed but unknown</p>' },
+            { category: 'sampling', question: 'What is sampling bias vs sampling error?', label: 'Fundamentals', answer: '<h3>Sampling Bias vs Error</h3><p><strong>Sampling Error:</strong> Random variation of sample statistic around parameter</p><ul><li>Inevitable, exists even with perfect random sampling</li><li>Example: Flip coin 100x → sometimes get 45 heads, sometimes 55 heads</li><li>Solution: Larger samples reduce sampling error</li><li>Measured by standard error</li></ul><p><strong>Sampling Bias:</strong> Systematic difference between sample statistic and parameter</p><ul><li>Results from non-random or non-representative sample</li><li>Example: Only survey online users (miss offline population)</li><li>Doesn\'t go away with larger samples</li><li>Solution: Better sampling method, randomization</li></ul><p><strong>Key difference:</strong> Error is random, bias is systematic</p>' },
+        ];
+
+        let currentCardIndex = 0;
+        let filteredIndices = [];
+        let currentFilter = 'all';
+
+        function updateFilteredCards() {
+            if (currentFilter === 'all') {
+                filteredIndices = cards.map((_, i) => i);
+            } else {
+                filteredIndices = cards.map((card, i) => card.category === currentFilter ? i : -1).filter(i => i !== -1);
+            }
+            document.getElementById('total-cards-nav').textContent = filteredIndices.length;
+            document.getElementById('showing-cards').textContent = filteredIndices.length;
+            currentCardIndex = 0;
+            showCard(0);
+        }
+
+        function filterCards(category) {
+            currentFilter = category;
+            updateFilteredCards();
+            document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+        }
+
+        function showCard(index) {
+            if (filteredIndices.length === 0) return;
+            currentCardIndex = Math.max(0, Math.min(index, filteredIndices.length - 1));
+            const cardData = cards[filteredIndices[currentCardIndex]];
+            document.getElementById('question').textContent = cardData.question;
+            document.querySelector('.card-label').textContent = cardData.label;
+            document.getElementById('answer').innerHTML = cardData.answer;
+            document.getElementById('current-card').textContent = currentCardIndex + 1;
+            const card = document.getElementById('main-card');
+            card.classList.remove('flipped');
+            document.getElementById('prev-btn').disabled = currentCardIndex === 0;
+            document.getElementById('next-btn').disabled = currentCardIndex === filteredIndices.length - 1;
+        }
+
+        function nextCard() { showCard(currentCardIndex + 1); }
+        function previousCard() { showCard(currentCardIndex - 1); }
+        function flipCard() { document.getElementById('main-card').classList.toggle('flipped'); }
+
+        updateFilteredCards();
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight') nextCard();
+            if (e.key === 'ArrowLeft') previousCard();
+            if (e.key === ' ') { e.preventDefault(); flipCard(); }
+        });
+    </script>
+</body>
+</html>

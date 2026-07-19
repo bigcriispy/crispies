@@ -1,0 +1,7 @@
+ANTHROPIC_API_KEY=sk-ant-api03-...
+SUPABASE_SERVICE_KEY=eyJ...
+
+# Copy this file to .dev.vars (gitignored) for local `wrangler dev`.
+# In production these are set via:
+#   wrangler secret put ANTHROPIC_API_KEY
+#   wrangler secret put SUPABASE_SERVICE_KEY

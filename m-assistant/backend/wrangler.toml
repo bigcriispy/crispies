@@ -1,0 +1,15 @@
+name = "m-backend"
+main = "src/index.ts"
+compatibility_date = "2025-09-01"
+
+[vars]
+SUPABASE_URL = "https://YOUR-PROJECT.supabase.co"
+
+# Nightly jobs, staggered 15 minutes apart, UTC. Adjust to your timezone —
+# these default times land around 1-1:30am US Pacific.
+[triggers]
+crons = ["0 9 * * *", "15 9 * * *", "30 9 * * *"]
+
+# Secrets (set via `wrangler secret put <NAME>`, never committed):
+#   ANTHROPIC_API_KEY
+#   SUPABASE_SERVICE_KEY
